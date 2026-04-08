@@ -95,6 +95,14 @@ export default function ConnectScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
+      {/* 상단 뒤로가기 */}
+      <TouchableOpacity style={styles.backBtn} onPress={() => {
+        if (isDemoMode) { router.replace('/login'); }
+        else { signOut(); }
+      }}>
+        <Text style={styles.backArrow}>←</Text>
+      </TouchableOpacity>
+
       <View style={styles.content}>
         <Text style={styles.emoji}>💑</Text>
         <Text style={styles.title}>파트너 연결하기</Text>
@@ -180,13 +188,6 @@ export default function ConnectScreen() {
         )}
       </View>
 
-      <TouchableOpacity style={styles.logoutButton} onPress={() => {
-        if (isDemoMode) { router.replace('/login'); }
-        else { signOut(); }
-      }}>
-        <Text style={styles.logoutText}>{isDemoMode ? '뒤로가기' : '로그아웃'}</Text>
-      </TouchableOpacity>
-
       {/* 연결 성공 모달 */}
       <ConfirmModal
         visible={showSuccess}
@@ -203,7 +204,9 @@ export default function ConnectScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { flex: 1, paddingHorizontal: 24, paddingTop: 60 },
+  backBtn: { paddingTop: 16, paddingLeft: 20, paddingBottom: 0, alignSelf: 'flex-start' },
+  backArrow: { fontSize: 28, color: Colors.text },
+  content: { flex: 1, paddingHorizontal: 24, paddingTop: 20 },
   emoji: { fontSize: 60, marginBottom: 12 },
   title: { fontSize: 28, fontWeight: '800', color: Colors.text, marginBottom: 8 },
   subtitle: { fontSize: 15, color: Colors.textSecondary, marginBottom: 28, lineHeight: 22 },
