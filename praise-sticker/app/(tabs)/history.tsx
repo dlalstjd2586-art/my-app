@@ -3,6 +3,8 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl } 
 import { useRouter } from 'expo-router';
 import { Colors, StickerPresets } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
+import { useDemoStore } from '@/stores/demoStore';
+import { DEMO_HISTORY_BOARDS, type DemoBoardWithDetails } from '@/lib/demo-data';
 import type { StickerBoard, Reward } from '@/types/database';
 
 interface BoardWithReward extends StickerBoard {
@@ -13,11 +15,21 @@ type FilterType = 'all' | 'success' | 'failed' | 'cancelled';
 
 export default function HistoryScreen() {
   const router = useRouter();
+  const { isDemoMode } = useDemoStore();
   const [boards, setBoards] = useState<BoardWithReward[]>([]);
   const [filter, setFilter] = useState<FilterType>('all');
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchHistory = async () => {
+    if (isDemoMode) {
+      let filtered = DEMO_HISTORY_BOARDS;
+      if (filter !== 'all') {
+        filtered = DEMO_HISTORY_BOARDS.filter(b => b.status === filter);
+      }
+      setBoards(filtered);
+      return;
+    }
+
     setIsLoading(true);
     const { data: { session } } = await supabase.auth.getSession();
     if (!session?.user?.id) { setIsLoading(false); return; }
@@ -38,7 +50,7 @@ export default function HistoryScreen() {
     setIsLoading(false);
   };
 
-  useEffect(() => { fetchHistory(); }, [filter]);
+  useEffect(() => { fetchHistory(); }, [filter, isDemoMode]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -87,7 +99,7 @@ export default function HistoryScreen() {
           <Text style={styles.emptyText}>아직 완료된 기록이 없어요</Text>
         </View>
       ) : (
-        boards.map(board => {
+        boards.map((board: BoardWithReward) => {
           const badge = getStatusBadge(board.status);
           const percent = Math.round((board.current_count / board.target_count) * 100);
 
@@ -128,88 +140,22 @@ export default function HistoryScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: Colors.background,
-  },
-  content: {
-    padding: 20,
-    gap: 12,
-  },
-  filterRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 4,
-  },
-  filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: Colors.surface,
-    borderWidth: 1,
-    borderColor: Colors.border,
-  },
-  filterChipActive: {
-    backgroundColor: Colors.primary,
-    borderColor: Colors.primary,
-  },
-  filterChipText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textSecondary,
-  },
-  filterChipTextActive: {
-    color: '#fff',
-  },
-  emptyState: {
-    alignItems: 'center',
-    paddingVertical: 60,
-    gap: 12,
-  },
-  emptyEmoji: {
-    fontSize: 48,
-  },
-  emptyText: {
-    fontSize: 16,
-    color: Colors.textSecondary,
-  },
-  card: {
-    backgroundColor: Colors.surface,
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: Colors.border,
-    gap: 10,
-  },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-  },
-  cardTitle: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.text,
-    flex: 1,
-  },
-  statusBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-  },
-  statusText: {
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  cardMeta: {
-    gap: 4,
-  },
-  metaText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
-  rewardText: {
-    fontSize: 13,
-    color: Colors.textSecondary,
-  },
+  container: { flex: 1, backgroundColor: Colors.background },
+  content: { padding: 20, gap: 12 },
+  filterRow: { flexDirection: 'row', gap: 8, marginBottom: 4 },
+  filterChip: { paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20, backgroundColor: Colors.surface, borderWidth: 1, borderColor: Colors.border },
+  filterChipActive: { backgroundColor: Colors.primary, borderColor: Colors.primary },
+  filterChipText: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
+  filterChipTextActive: { color: '#fff' },
+  emptyState: { alignItems: 'center', paddingVertical: 60, gap: 12 },
+  emptyEmoji: { fontSize: 48 },
+  emptyText: { fontSize: 16, color: Colors.textSecondary },
+  card: { backgroundColor: Colors.surface, borderRadius: 14, padding: 16, borderWidth: 1, borderColor: Colors.border, gap: 10 },
+  cardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  cardTitle: { fontSize: 16, fontWeight: '700', color: Colors.text, flex: 1 },
+  statusBadge: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8 },
+  statusText: { fontSize: 12, fontWeight: '700' },
+  cardMeta: { gap: 4 },
+  metaText: { fontSize: 13, color: Colors.textSecondary },
+  rewardText: { fontSize: 13, color: Colors.textSecondary },
 });

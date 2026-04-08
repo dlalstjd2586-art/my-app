@@ -1,57 +1,22 @@
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/Colors';
-import { supabase } from '@/lib/supabase';
-import * as WebBrowser from 'expo-web-browser';
-import * as Linking from 'expo-linking';
+import { useDemoStore } from '@/stores/demoStore';
 
 export default function LoginScreen() {
-  const handleGoogleLogin = async () => {
-    try {
-      const redirectUrl = Linking.createURL('auth/callback');
+  const router = useRouter();
+  const { enableDemo } = useDemoStore();
 
-      const { data, error } = await supabase.auth.signInWithOAuth({
-        provider: 'google',
-        options: {
-          redirectTo: redirectUrl,
-          skipBrowserRedirect: true,
-        },
-      });
-
-      if (error) {
-        Alert.alert('로그인 실패', error.message);
-        return;
-      }
-
-      if (data?.url) {
-        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
-        if (result.type === 'success' && result.url) {
-          const url = new URL(result.url);
-          const params = new URLSearchParams(url.hash.substring(1));
-          const accessToken = params.get('access_token');
-          const refreshToken = params.get('refresh_token');
-
-          if (accessToken && refreshToken) {
-            await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
-          }
-        }
-      }
-    } catch (e) {
-      Alert.alert('오류', '로그인 중 문제가 발생했어요');
-    }
+  const handleGoogleLogin = () => {
+    Alert.alert(
+      'Supabase 연결 필요',
+      'Google 로그인을 사용하려면 Supabase 프로젝트를 먼저 설정해야 해요.\n\n지금은 "데모 모드"로 앱을 체험해보세요!',
+    );
   };
 
-  // For development: email/password login
-  const handleDevLogin = async () => {
-    Alert.prompt?.(
-      '개발용 로그인',
-      '이메일을 입력하세요',
-      async (email) => {
-        if (!email) return;
-        const { error } = await supabase.auth.signInWithOtp({ email });
-        if (error) Alert.alert('오류', error.message);
-        else Alert.alert('확인', '이메일을 확인해주세요');
-      }
-    );
+  const handleDemoMode = () => {
+    enableDemo();
+    router.replace('/(tabs)/home');
   };
 
   return (
@@ -64,8 +29,19 @@ export default function LoginScreen() {
           <Text style={styles.subtitle}>서로에게 칭찬 스티커를 주고{'\n'}목표를 달성해보세요</Text>
         </View>
 
-        {/* Login Buttons */}
+        {/* Buttons */}
         <View style={styles.buttonArea}>
+          {/* Demo Mode - 가장 눈에 띄게 */}
+          <TouchableOpacity style={styles.demoButton} onPress={handleDemoMode}>
+            <Text style={styles.demoButtonText}>데모 모드로 체험하기</Text>
+          </TouchableOpacity>
+
+          <View style={styles.dividerRow}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>또는</Text>
+            <View style={styles.dividerLine} />
+          </View>
+
           <TouchableOpacity style={styles.googleButton} onPress={handleGoogleLogin}>
             <Text style={styles.googleIcon}>G</Text>
             <Text style={styles.googleText}>Google로 시작하기</Text>
@@ -114,6 +90,31 @@ const styles = StyleSheet.create({
   },
   buttonArea: {
     gap: 16,
+  },
+  demoButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: 12,
+    paddingVertical: 18,
+    alignItems: 'center',
+  },
+  demoButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+  dividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: Colors.border,
+  },
+  dividerText: {
+    fontSize: 13,
+    color: Colors.textLight,
   },
   googleButton: {
     flexDirection: 'row',

@@ -1,39 +1,46 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Colors } from '@/constants/Colors';
+import { Colors, StickerPresets } from '@/constants/Colors';
 import { useAuthStore } from '@/stores/authStore';
 import { useRelationshipStore } from '@/stores/relationshipStore';
 import { useBoardStore } from '@/stores/boardStore';
-import { StickerPresets } from '@/constants/Colors';
-import { useState } from 'react';
+import { useDemoStore } from '@/stores/demoStore';
+import { DEMO_USER, DEMO_PARTNER, DEMO_ACTIVE_BOARDS, type DemoBoardWithDetails } from '@/lib/demo-data';
 
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { partner } = useRelationshipStore();
   const { boards, isLoading, fetchBoards, checkExpiredBoards } = useBoardStore();
+  const { isDemoMode } = useDemoStore();
   const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
-    fetchBoards();
-  }, []);
+    if (!isDemoMode) fetchBoards();
+  }, [isDemoMode]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await checkExpiredBoards();
-    await fetchBoards();
+    if (!isDemoMode) {
+      await checkExpiredBoards();
+      await fetchBoards();
+    }
     setRefreshing(false);
   };
 
-  const activeBoards = boards.filter(b => b.status === 'active');
-  const draftBoards = boards.filter(b => b.status === 'draft');
+  // 데모 모드면 가짜 데이터, 아니면 진짜 데이터
+  const displayUser = isDemoMode ? DEMO_USER : user;
+  const displayPartner = isDemoMode ? DEMO_PARTNER : partner;
+  const displayBoards = isDemoMode ? DEMO_ACTIVE_BOARDS : boards;
+
+  const activeBoards = displayBoards.filter((b: DemoBoardWithDetails) => b.status === 'active');
+  const draftBoards = displayBoards.filter((b: DemoBoardWithDetails) => b.status === 'draft');
 
   const getDaysLeft = (endDate: string) => {
     const end = new Date(endDate);
     const now = new Date();
-    const diff = Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-    return diff;
+    return Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   };
 
   const getProgressPercent = (current: number, target: number) => {
@@ -50,17 +57,24 @@ export default function HomeScreen() {
       contentContainerStyle={styles.content}
       refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
     >
+      {/* Demo Banner */}
+      {isDemoMode && (
+        <View style={styles.demoBanner}>
+          <Text style={styles.demoBannerText}>데모 모드 - 가짜 데이터로 체험 중</Text>
+        </View>
+      )}
+
       {/* Partner Info */}
       <View style={styles.partnerCard}>
         <Text style={styles.partnerEmoji}>💑</Text>
         <View>
           <Text style={styles.partnerLabel}>나의 파트너</Text>
-          <Text style={styles.partnerName}>{partner?.nickname ?? '...'}</Text>
+          <Text style={styles.partnerName}>{displayPartner?.nickname ?? '...'}</Text>
         </View>
       </View>
 
       {/* Draft Boards (needs acceptance) */}
-      {draftBoards.map(board => (
+      {draftBoards.map((board: DemoBoardWithDetails) => (
         <TouchableOpacity
           key={board.id}
           style={[styles.boardCard, styles.boardCardDraft]}
@@ -78,7 +92,7 @@ export default function HomeScreen() {
 
       {/* Active Boards */}
       {activeBoards.length > 0 ? (
-        activeBoards.map(board => {
+        activeBoards.map((board: DemoBoardWithDetails) => {
           const daysLeft = getDaysLeft(board.end_date);
           const percent = getProgressPercent(board.current_count, board.target_count);
 
@@ -95,7 +109,6 @@ export default function HomeScreen() {
                 </Text>
               </View>
 
-              {/* Progress Bar */}
               <View style={styles.progressContainer}>
                 <View style={styles.progressBar}>
                   <View style={[styles.progressFill, { width: `${percent}%` }]} />
@@ -105,7 +118,6 @@ export default function HomeScreen() {
                 </Text>
               </View>
 
-              {/* Reward Preview */}
               {board.rewards && board.rewards.length > 0 && (
                 <Text style={styles.rewardPreview}>
                   🎁 {board.rewards[0].description}
@@ -142,6 +154,18 @@ const styles = StyleSheet.create({
     padding: 20,
     paddingBottom: 40,
     gap: 16,
+  },
+  demoBanner: {
+    backgroundColor: '#FFF3E0',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    alignItems: 'center',
+  },
+  demoBannerText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#E65100',
   },
   partnerCard: {
     flexDirection: 'row',

@@ -4,22 +4,46 @@ import { useLocalSearchParams } from 'expo-router';
 import { Colors, StickerPresets } from '@/constants/Colors';
 import { useAuthStore } from '@/stores/authStore';
 import { useBoardStore } from '@/stores/boardStore';
+import { useDemoStore } from '@/stores/demoStore';
+import {
+  DEMO_USER, DEMO_ACTIVE_BOARDS, DEMO_HISTORY_BOARDS,
+  generateDemoStickers, type DemoBoardWithDetails,
+} from '@/lib/demo-data';
+import type { Sticker, Reward, Penalty } from '@/types/database';
 
 export default function BoardDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuthStore();
   const { currentBoard, stickers, isLoading, fetchBoardDetail, acceptBoard, giveSticker, completeReward, completePenalty } = useBoardStore();
+  const { isDemoMode } = useDemoStore();
 
   const [showStickerSheet, setShowStickerSheet] = useState(false);
   const [memo, setMemo] = useState('');
   const [isGiving, setIsGiving] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
 
-  useEffect(() => {
-    if (id) fetchBoardDetail(id);
-  }, [id]);
+  // 데모 모드: 가짜 데이터에서 보드 찾기
+  const [demoBoard, setDemoBoard] = useState<DemoBoardWithDetails | null>(null);
+  const [demoStickers, setDemoStickers] = useState<Sticker[]>([]);
 
-  if (!currentBoard) {
+  useEffect(() => {
+    if (isDemoMode && id) {
+      const allBoards = [...DEMO_ACTIVE_BOARDS, ...DEMO_HISTORY_BOARDS];
+      const found = allBoards.find(b => b.id === id) ?? null;
+      setDemoBoard(found);
+      if (found) {
+        setDemoStickers(generateDemoStickers(found.id, found.current_count));
+      }
+    } else if (id) {
+      fetchBoardDetail(id);
+    }
+  }, [id, isDemoMode]);
+
+  const board = isDemoMode ? demoBoard : currentBoard;
+  const displayStickers = isDemoMode ? demoStickers : stickers;
+  const displayUser = isDemoMode ? DEMO_USER : user;
+
+  if (!board) {
     return (
       <View style={styles.loadingContainer}>
         <Text style={styles.loadingText}>로딩 중...</Text>
@@ -27,58 +51,92 @@ export default function BoardDetailScreen() {
     );
   }
 
-  const isGiver = currentBoard.giver_id === user?.id;
-  const isCollector = currentBoard.collector_id === user?.id;
-  const isDraft = currentBoard.status === 'draft';
-  const isActive = currentBoard.status === 'active';
-  const isSuccess = currentBoard.status === 'success';
-  const isFailed = currentBoard.status === 'failed';
-  const canAccept = isDraft && currentBoard.creator_id !== user?.id;
+  const isGiver = board.giver_id === displayUser?.id;
+  const isDraft = board.status === 'draft';
+  const isActive = board.status === 'active';
+  const isSuccess = board.status === 'success';
+  const isFailed = board.status === 'failed';
+  const canAccept = isDraft && board.creator_id !== displayUser?.id;
 
-  const stickerEmoji = StickerPresets.find(s => s.id === currentBoard.sticker_preset)?.emoji ?? '⭐';
-  const percent = Math.min(Math.round((currentBoard.current_count / currentBoard.target_count) * 100), 100);
+  const stickerEmoji = StickerPresets.find(s => s.id === board.sticker_preset)?.emoji ?? '⭐';
+  const percent = Math.min(Math.round((board.current_count / board.target_count) * 100), 100);
   const daysLeft = Math.ceil(
-    (new Date(currentBoard.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+    (new Date(board.end_date).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
   );
 
-  const reward = currentBoard.rewards?.[0];
-  const penalty = currentBoard.penalties?.[0];
+  const reward: Reward | undefined = (board as DemoBoardWithDetails).rewards?.[0];
+  const penalty: Penalty | undefined = (board as DemoBoardWithDetails).penalties?.[0];
 
   const handleAccept = async () => {
-    const result = await acceptBoard(currentBoard.id);
-    if (result.success) {
-      fetchBoardDetail(currentBoard.id);
-    } else {
-      Alert.alert('오류', result.error);
+    if (isDemoMode) {
+      Alert.alert('데모 모드', '데모 모드에서는 수락이 자동 처리됩니다!');
+      if (demoBoard) setDemoBoard({ ...demoBoard, status: 'active' });
+      return;
     }
+    const result = await acceptBoard(board.id);
+    if (result.success) fetchBoardDetail(board.id);
+    else Alert.alert('오류', result.error);
   };
 
   const handleGiveSticker = async () => {
+    if (isDemoMode) {
+      // 데모: 스티커 추가 시뮬레이션
+      setIsGiving(true);
+      await new Promise(r => setTimeout(r, 500));
+      const newCount = board.current_count + 1;
+      const goalAchieved = newCount >= board.target_count;
+
+      const newSticker: Sticker = {
+        id: `demo-new-${newCount}`,
+        board_id: board.id,
+        giver_id: DEMO_USER.id,
+        memo: memo.trim() || null,
+        sequence: newCount,
+        created_at: new Date().toISOString(),
+      };
+
+      setDemoStickers(prev => [...prev, newSticker]);
+      setDemoBoard(prev => prev ? { ...prev, current_count: newCount, status: goalAchieved ? 'success' : prev.status } : prev);
+
+      setIsGiving(false);
+      setShowStickerSheet(false);
+      setMemo('');
+
+      if (goalAchieved) setShowCelebration(true);
+      return;
+    }
+
     setIsGiving(true);
-    const result = await giveSticker(currentBoard.id, memo.trim() || undefined);
+    const result = await giveSticker(board.id, memo.trim() || undefined);
     setIsGiving(false);
     setShowStickerSheet(false);
     setMemo('');
 
-    if (result.success && result.goalAchieved) {
-      setShowCelebration(true);
-    } else if (!result.success) {
-      Alert.alert('오류', result.error);
-    }
+    if (result.success && result.goalAchieved) setShowCelebration(true);
+    else if (!result.success) Alert.alert('오류', result.error);
   };
 
   const handleCompleteReward = () => {
     if (!reward) return;
     Alert.alert('보상 완료', '보상을 이행했나요?', [
       { text: '아직이요', style: 'cancel' },
-      { text: '완료!', onPress: () => completeReward(reward.id) },
+      {
+        text: '완료!',
+        onPress: () => {
+          if (isDemoMode) {
+            Alert.alert('축하해요!', '보상이 완료 처리되었습니다');
+          } else {
+            completeReward(reward.id);
+          }
+        },
+      },
     ]);
   };
 
   // Build sticker grid
   const gridItems = [];
-  for (let i = 1; i <= currentBoard.target_count; i++) {
-    const sticker = stickers.find(s => s.sequence === i);
+  for (let i = 1; i <= board.target_count; i++) {
+    const sticker = displayStickers.find(s => s.sequence === i);
     gridItems.push({ index: i, filled: !!sticker, memo: sticker?.memo });
   }
 
@@ -87,7 +145,7 @@ export default function BoardDetailScreen() {
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => fetchBoardDetail(currentBoard.id)} />}
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={() => !isDemoMode && fetchBoardDetail(board.id)} />}
       >
         {/* Status Banner */}
         {isDraft && (
@@ -122,7 +180,7 @@ export default function BoardDetailScreen() {
           <View style={styles.progressSection}>
             <View style={styles.progressHeader}>
               <Text style={styles.progressCount}>
-                {stickerEmoji} {currentBoard.current_count}/{currentBoard.target_count}
+                {stickerEmoji} {board.current_count}/{board.target_count}
               </Text>
               {isActive && (
                 <Text style={[styles.daysLeftText, daysLeft <= 3 && { color: Colors.error }]}>
@@ -180,7 +238,7 @@ export default function BoardDetailScreen() {
                   onPress={() => {
                     Alert.alert('패널티 완료', '패널티를 이행했나요?', [
                       { text: '아직이요', style: 'cancel' },
-                      { text: '완료!', onPress: () => completePenalty(penalty.id) },
+                      { text: '완료!', onPress: () => isDemoMode ? Alert.alert('완료!', '패널티가 이행되었습니다') : completePenalty(penalty.id) },
                     ]);
                   }}
                 >
@@ -195,10 +253,10 @@ export default function BoardDetailScreen() {
         </View>
 
         {/* Recent Sticker Log */}
-        {stickers.length > 0 && (
+        {displayStickers.length > 0 && (
           <View style={styles.logSection}>
             <Text style={styles.logTitle}>최근 기록</Text>
-            {stickers.slice(-5).reverse().map(s => (
+            {displayStickers.slice(-5).reverse().map(s => (
               <View key={s.id} style={styles.logItem}>
                 <Text style={styles.logEmoji}>{stickerEmoji}</Text>
                 <View style={styles.logContent}>
@@ -214,7 +272,7 @@ export default function BoardDetailScreen() {
       </ScrollView>
 
       {/* Give Sticker FAB */}
-      {isActive && isGiver && (
+      {(isActive || (isDemoMode && board.status === 'active')) && isGiver && (
         <TouchableOpacity
           style={styles.fab}
           onPress={() => setShowStickerSheet(true)}
@@ -223,15 +281,13 @@ export default function BoardDetailScreen() {
         </TouchableOpacity>
       )}
 
-      {/* Give Sticker Bottom Sheet (Modal) */}
+      {/* Give Sticker Bottom Sheet */}
       <Modal visible={showStickerSheet} transparent animationType="slide">
         <View style={styles.sheetOverlay}>
           <View style={styles.sheet}>
             <Text style={styles.sheetTitle}>스티커 주기</Text>
             <Text style={styles.sheetSticker}>{stickerEmoji}</Text>
-            <Text style={styles.sheetCount}>
-              {currentBoard.current_count + 1}번째 스티커
-            </Text>
+            <Text style={styles.sheetCount}>{board.current_count + 1}번째 스티커</Text>
             <TextInput
               style={styles.sheetInput}
               placeholder="한 줄 메모 (선택)"
@@ -245,9 +301,7 @@ export default function BoardDetailScreen() {
               onPress={handleGiveSticker}
               disabled={isGiving}
             >
-              <Text style={styles.sheetButtonText}>
-                {isGiving ? '부여 중...' : '스티커 주기'}
-              </Text>
+              <Text style={styles.sheetButtonText}>{isGiving ? '부여 중...' : '스티커 주기'}</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => { setShowStickerSheet(false); setMemo(''); }}>
               <Text style={styles.sheetCancel}>취소</Text>
@@ -269,10 +323,7 @@ export default function BoardDetailScreen() {
                 <Text style={styles.celebrationRewardText}>{reward.description}</Text>
               </View>
             )}
-            <TouchableOpacity
-              style={styles.celebrationButton}
-              onPress={() => setShowCelebration(false)}
-            >
+            <TouchableOpacity style={styles.celebrationButton} onPress={() => setShowCelebration(false)}>
               <Text style={styles.celebrationButtonText}>확인</Text>
             </TouchableOpacity>
           </View>
@@ -287,8 +338,6 @@ const styles = StyleSheet.create({
   content: { padding: 20, paddingBottom: 100, gap: 20 },
   loadingContainer: { flex: 1, justifyContent: 'center', alignItems: 'center' },
   loadingText: { fontSize: 16, color: Colors.textSecondary },
-
-  // Status banners
   draftBanner: { backgroundColor: Colors.secondaryLight, borderRadius: 14, padding: 16, gap: 12, alignItems: 'center' },
   draftBannerText: { fontSize: 15, color: Colors.text, textAlign: 'center' },
   acceptButton: { backgroundColor: Colors.primary, borderRadius: 10, paddingHorizontal: 24, paddingVertical: 10 },
@@ -296,8 +345,6 @@ const styles = StyleSheet.create({
   statusBanner: { borderRadius: 14, padding: 16, alignItems: 'center', gap: 4 },
   statusBannerEmoji: { fontSize: 36 },
   statusBannerText: { fontSize: 20, fontWeight: '800' },
-
-  // Progress
   progressSection: { gap: 8 },
   progressHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   progressCount: { fontSize: 22, fontWeight: '800', color: Colors.text },
@@ -305,18 +352,11 @@ const styles = StyleSheet.create({
   progressBar: { height: 12, backgroundColor: Colors.border, borderRadius: 6, overflow: 'hidden' },
   progressFill: { height: '100%', backgroundColor: Colors.primary, borderRadius: 6 },
   percentText: { fontSize: 13, color: Colors.textSecondary },
-
-  // Grid
   gridContainer: { backgroundColor: Colors.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: Colors.border },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
-  gridCell: {
-    width: 48, height: 48, borderRadius: 12, backgroundColor: '#F5F5F5',
-    alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border,
-  },
+  gridCell: { width: 48, height: 48, borderRadius: 12, backgroundColor: '#F5F5F5', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: Colors.border },
   gridCellFilled: { backgroundColor: Colors.secondaryLight, borderColor: Colors.secondary },
   gridCellText: { fontSize: 18 },
-
-  // Info
   infoSection: { gap: 12 },
   infoCard: { backgroundColor: Colors.surface, borderRadius: 14, padding: 16, borderWidth: 1, borderColor: Colors.border, gap: 8 },
   infoLabel: { fontSize: 14, fontWeight: '600', color: Colors.textSecondary },
@@ -324,9 +364,6 @@ const styles = StyleSheet.create({
   completeButton: { backgroundColor: Colors.success, borderRadius: 10, paddingVertical: 10, alignItems: 'center', marginTop: 4 },
   completeButtonText: { color: '#fff', fontSize: 15, fontWeight: '700' },
   completedBadge: { fontSize: 14, color: Colors.success, fontWeight: '600' },
-  penaltyPending: { fontSize: 14, color: Colors.warning, fontWeight: '600' },
-
-  // Log
   logSection: { gap: 10 },
   logTitle: { fontSize: 16, fontWeight: '700', color: Colors.text },
   logItem: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
@@ -334,31 +371,17 @@ const styles = StyleSheet.create({
   logContent: { flex: 1 },
   logDate: { fontSize: 13, color: Colors.textSecondary },
   logMemo: { fontSize: 14, color: Colors.text, marginTop: 2 },
-
-  // FAB
-  fab: {
-    position: 'absolute', bottom: 24, left: 20, right: 20,
-    backgroundColor: Colors.primary, borderRadius: 16, paddingVertical: 18,
-    alignItems: 'center', elevation: 4,
-    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 8,
-  },
+  fab: { position: 'absolute', bottom: 24, left: 20, right: 20, backgroundColor: Colors.primary, borderRadius: 16, paddingVertical: 18, alignItems: 'center', elevation: 4, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 8 },
   fabText: { color: '#fff', fontSize: 18, fontWeight: '700' },
-
-  // Bottom Sheet
   sheetOverlay: { flex: 1, justifyContent: 'flex-end', backgroundColor: Colors.overlay },
   sheet: { backgroundColor: Colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, padding: 24, alignItems: 'center', gap: 16 },
   sheetTitle: { fontSize: 20, fontWeight: '700', color: Colors.text },
   sheetSticker: { fontSize: 56 },
   sheetCount: { fontSize: 16, color: Colors.textSecondary },
-  sheetInput: {
-    width: '100%', backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border,
-    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, color: Colors.text,
-  },
+  sheetInput: { width: '100%', backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border, borderRadius: 12, paddingHorizontal: 16, paddingVertical: 12, fontSize: 16, color: Colors.text },
   sheetButton: { width: '100%', backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 16, alignItems: 'center' },
   sheetButtonText: { color: '#fff', fontSize: 18, fontWeight: '700' },
   sheetCancel: { fontSize: 16, color: Colors.textSecondary, paddingVertical: 8 },
-
-  // Celebration
   celebrationOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: Colors.overlay },
   celebrationContent: { backgroundColor: Colors.surface, borderRadius: 24, padding: 32, alignItems: 'center', gap: 12, marginHorizontal: 32 },
   celebrationEmoji: { fontSize: 64 },
