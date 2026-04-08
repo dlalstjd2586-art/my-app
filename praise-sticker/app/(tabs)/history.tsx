@@ -4,7 +4,7 @@ import { useRouter } from 'expo-router';
 import { Colors, StickerPresets } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { useDemoStore } from '@/stores/demoStore';
-import { DEMO_HISTORY_BOARDS, type DemoBoardWithDetails } from '@/lib/demo-data';
+import type { DemoBoardWithDetails } from '@/lib/demo-data';
 import type { StickerBoard, Reward } from '@/types/database';
 
 interface BoardWithReward extends StickerBoard {
@@ -15,16 +15,16 @@ type FilterType = 'all' | 'success' | 'failed' | 'cancelled';
 
 export default function HistoryScreen() {
   const router = useRouter();
-  const { isDemoMode } = useDemoStore();
+  const { isDemoMode, historyBoards: demoHistoryBoards } = useDemoStore();
   const [boards, setBoards] = useState<BoardWithReward[]>([]);
   const [filter, setFilter] = useState<FilterType>('all');
   const [isLoading, setIsLoading] = useState(false);
 
   const fetchHistory = async () => {
     if (isDemoMode) {
-      let filtered = DEMO_HISTORY_BOARDS;
+      let filtered = demoHistoryBoards;
       if (filter !== 'all') {
-        filtered = DEMO_HISTORY_BOARDS.filter(b => b.status === filter);
+        filtered = demoHistoryBoards.filter(b => b.status === filter);
       }
       setBoards(filtered);
       return;

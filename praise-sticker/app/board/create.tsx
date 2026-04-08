@@ -7,14 +7,15 @@ import { useAuthStore } from '@/stores/authStore';
 import { useRelationshipStore } from '@/stores/relationshipStore';
 import { useBoardStore } from '@/stores/boardStore';
 import { useDemoStore } from '@/stores/demoStore';
-import { DEMO_USER, DEMO_PARTNER } from '@/lib/demo-data';
+import { DEMO_USER, DEMO_PARTNER, DEMO_RELATIONSHIP } from '@/lib/demo-data';
+import type { DemoBoardWithDetails } from '@/lib/demo-data';
 
 export default function CreateBoardScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { partner } = useRelationshipStore();
   const { createBoard } = useBoardStore();
-  const { isDemoMode } = useDemoStore();
+  const { isDemoMode, addBoard } = useDemoStore();
 
   const [title, setTitle] = useState('');
   const [collectorIsMe, setCollectorIsMe] = useState(false);
@@ -58,7 +59,35 @@ export default function CreateBoardScreen() {
     if (hasPenalty && !penaltyDescription.trim()) { Alert.alert('알림', '패널티 내용을 입력해주세요'); return; }
 
     if (isDemoMode) {
-      Alert.alert('스티커판 생성 완료!', `"${title.trim()}" 스티커판이 만들어졌어요!\n\n(데모 모드에서는 홈 화면의 기존 데이터가 유지됩니다)`);
+      const today = new Date();
+      const endDate = new Date(today);
+      endDate.setDate(endDate.getDate() + days);
+      const collectorId = collectorIsMe ? DEMO_USER.id : DEMO_PARTNER.id;
+      const giverId = collectorIsMe ? DEMO_PARTNER.id : DEMO_USER.id;
+
+      const newBoard: DemoBoardWithDetails = {
+        id: `demo-board-${Date.now()}`,
+        relationship_id: DEMO_RELATIONSHIP.id,
+        creator_id: DEMO_USER.id,
+        collector_id: collectorId,
+        giver_id: giverId,
+        title: title.trim(),
+        target_count: target,
+        current_count: 0,
+        sticker_image_url: customStickerUri,
+        sticker_preset: selectedSticker === 'custom' ? 'star_gold' : selectedSticker,
+        start_date: today.toISOString().split('T')[0],
+        end_date: endDate.toISOString().split('T')[0],
+        status: 'active',
+        has_penalty: hasPenalty,
+        created_at: today.toISOString(),
+        updated_at: today.toISOString(),
+        rewards: [{ id: `demo-reward-${Date.now()}`, board_id: '', description: rewardDescription.trim(), reward_type: 'promise', reward_data: null, status: 'waiting', provider_id: giverId, completed_at: null, proof_image_url: null, created_at: today.toISOString(), updated_at: today.toISOString() }],
+        penalties: hasPenalty ? [{ id: `demo-penalty-${Date.now()}`, board_id: '', description: penaltyDescription.trim(), status: 'inactive', responsible_id: collectorId, completed_at: null, proof_image_url: null, created_at: today.toISOString(), updated_at: today.toISOString() }] : [],
+      };
+
+      addBoard(newBoard);
+      Alert.alert('완료!', `"${title.trim()}" 스티커판이 만들어졌어요!`);
       router.back();
       return;
     }

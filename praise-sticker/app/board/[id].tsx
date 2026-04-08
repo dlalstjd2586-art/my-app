@@ -6,8 +6,7 @@ import { useAuthStore } from '@/stores/authStore';
 import { useBoardStore } from '@/stores/boardStore';
 import { useDemoStore } from '@/stores/demoStore';
 import {
-  DEMO_USER, DEMO_ACTIVE_BOARDS, DEMO_HISTORY_BOARDS,
-  generateDemoStickers, type DemoBoardWithDetails,
+  DEMO_USER, generateDemoStickers, type DemoBoardWithDetails,
 } from '@/lib/demo-data';
 import type { Sticker, Reward, Penalty } from '@/types/database';
 
@@ -24,7 +23,7 @@ export default function BoardDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuthStore();
   const { currentBoard, stickers, isLoading, fetchBoardDetail, acceptBoard, giveSticker, completeReward, completePenalty } = useBoardStore();
-  const { isDemoMode } = useDemoStore();
+  const { isDemoMode, getBoardById } = useDemoStore();
 
   const [showStickerSheet, setShowStickerSheet] = useState(false);
   const [reason, setReason] = useState('');       // 칭찬 이유 (필수)
@@ -37,8 +36,7 @@ export default function BoardDetailScreen() {
 
   useEffect(() => {
     if (isDemoMode && id) {
-      const allBoards = [...DEMO_ACTIVE_BOARDS, ...DEMO_HISTORY_BOARDS];
-      const found = allBoards.find(b => b.id === id) ?? null;
+      const found = getBoardById(id);
       setDemoBoard(found);
       if (found) setDemoStickers(generateDemoStickers(found.id, found.current_count));
     } else if (id) {
