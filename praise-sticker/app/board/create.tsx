@@ -10,6 +10,16 @@ import { useDemoStore } from '@/stores/demoStore';
 import { DEMO_USER, DEMO_PARTNER, DEMO_RELATIONSHIP } from '@/lib/demo-data';
 import type { DemoBoardWithDetails } from '@/lib/demo-data';
 
+// 스티커판 템플릿
+const TEMPLATES = [
+  { emoji: '🏃', title: '운동 챌린지', target: 20, days: 30, reward: '맛있는 거 사주기', sticker: 'fire' },
+  { emoji: '📖', title: '독서 챌린지', target: 10, days: 30, reward: '원하는 책 선물', sticker: 'star_gold' },
+  { emoji: '🧹', title: '가사분담 챌린지', target: 15, days: 14, reward: '하루 쉬는 날', sticker: 'thumbs_up' },
+  { emoji: '💊', title: '영양제 챌린지', target: 30, days: 30, reward: '원하는 선물', sticker: 'heart_red' },
+  { emoji: '🌅', title: '기상 미션', target: 14, days: 14, reward: '브런치 데이트', sticker: 'sparkle' },
+  { emoji: '💰', title: '절약 챌린지', target: 30, days: 30, reward: '저축한 돈으로 여행', sticker: 'clap' },
+];
+
 export default function CreateBoardScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
@@ -18,6 +28,7 @@ export default function CreateBoardScreen() {
   const { isDemoMode, addBoard } = useDemoStore();
 
   const [title, setTitle] = useState('');
+  const [showTemplates, setShowTemplates] = useState(true);
   const [collectorIsMe, setCollectorIsMe] = useState(false);
   const [targetCount, setTargetCount] = useState('10');
   const [durationDays, setDurationDays] = useState('30');
@@ -117,6 +128,38 @@ export default function CreateBoardScreen() {
 
   return (
     <ScrollView style={styles.container} contentContainerStyle={styles.content}>
+      {/* 템플릿 선택 */}
+      {showTemplates && (
+        <View style={styles.field}>
+          <Text style={styles.label}>템플릿으로 빠르게 만들기</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.templateScroll}>
+            <View style={styles.templateRow}>
+              {TEMPLATES.map((t, i) => (
+                <TouchableOpacity
+                  key={i}
+                  style={styles.templateCard}
+                  onPress={() => {
+                    setTitle(t.title);
+                    setTargetCount(String(t.target));
+                    setDurationDays(String(t.days));
+                    setRewardDescription(t.reward);
+                    setSelectedSticker(t.sticker);
+                    setShowTemplates(false);
+                  }}
+                >
+                  <Text style={styles.templateEmoji}>{t.emoji}</Text>
+                  <Text style={styles.templateTitle}>{t.title}</Text>
+                  <Text style={styles.templateMeta}>{t.target}개 · {t.days}일</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+          <TouchableOpacity onPress={() => setShowTemplates(false)}>
+            <Text style={styles.templateSkip}>직접 만들기 →</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       {/* Title */}
       <View style={styles.field}>
         <Text style={styles.label}>스티커판 이름</Text>
@@ -297,6 +340,19 @@ const styles = StyleSheet.create({
   penaltyToggleOn: { backgroundColor: Colors.primary },
   penaltyToggleDot: { width: 22, height: 22, borderRadius: 11, backgroundColor: Colors.surface },
   penaltyToggleDotOn: { alignSelf: 'flex-end' },
+
+  // Templates
+  templateScroll: { marginHorizontal: -4 },
+  templateRow: { flexDirection: 'row', gap: 10, paddingHorizontal: 4, paddingVertical: 4 },
+  templateCard: {
+    width: 110, backgroundColor: Colors.surface, borderRadius: 14, padding: 12,
+    alignItems: 'center', gap: 6, borderWidth: 1.5, borderColor: Colors.border,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.06, shadowRadius: 4, elevation: 2,
+  },
+  templateEmoji: { fontSize: 32 },
+  templateTitle: { fontSize: 12, fontWeight: '700', color: Colors.text, textAlign: 'center' },
+  templateMeta: { fontSize: 10, color: Colors.textLight },
+  templateSkip: { fontSize: 14, color: Colors.primary, fontWeight: '600', textAlign: 'center', paddingTop: 4 },
 
   submitButton: { backgroundColor: Colors.primary, borderRadius: 14, paddingVertical: 18, alignItems: 'center', marginTop: 8 },
   submitButtonDisabled: { backgroundColor: Colors.disabled },

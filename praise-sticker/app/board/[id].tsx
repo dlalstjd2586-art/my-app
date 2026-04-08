@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Modal, TextInput, RefreshControl, Image } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
+import * as ImagePicker from 'expo-image-picker';
 import { Colors, StickerPresets } from '@/constants/Colors';
 import { useAuthStore } from '@/stores/authStore';
+import ConfettiOverlay from '@/components/ConfettiOverlay';
 import { useBoardStore } from '@/stores/boardStore';
 import { useDemoStore } from '@/stores/demoStore';
 import {
@@ -26,10 +28,12 @@ export default function BoardDetailScreen() {
   const { isDemoMode, getBoardById } = useDemoStore();
 
   const [showStickerSheet, setShowStickerSheet] = useState(false);
-  const [reason, setReason] = useState('');       // 칭찬 이유 (필수)
-  const [stickerCount, setStickerCount] = useState('1');  // 줄 개수
+  const [reason, setReason] = useState('');
+  const [stickerCount, setStickerCount] = useState('1');
+  const [proofPhotoUri, setProofPhotoUri] = useState<string | null>(null);
   const [isGiving, setIsGiving] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   const [demoBoard, setDemoBoard] = useState<DemoBoardWithDetails | null>(null);
   const [demoStickers, setDemoStickers] = useState<Sticker[]>([]);
@@ -121,7 +125,9 @@ export default function BoardDetailScreen() {
       setShowStickerSheet(false);
       setReason('');
       setStickerCount('1');
-      if (goalAchieved) setShowCelebration(true);
+      setProofPhotoUri(null);
+      setShowConfetti(true);
+      if (goalAchieved) setTimeout(() => setShowCelebration(true), 1200);
       return;
     }
 
@@ -140,7 +146,9 @@ export default function BoardDetailScreen() {
     setShowStickerSheet(false);
     setReason('');
     setStickerCount('1');
-    if (lastGoalAchieved) setShowCelebration(true);
+    setProofPhotoUri(null);
+    setShowConfetti(true);
+    if (lastGoalAchieved) setTimeout(() => setShowCelebration(true), 1200);
   };
 
   // 남은 스티커 수
@@ -156,6 +164,9 @@ export default function BoardDetailScreen() {
 
   return (
     <>
+      {/* Confetti 애니메이션 */}
+      <ConfettiOverlay visible={showConfetti} emoji={stickerEmoji} onFinish={() => setShowConfetti(false)} />
+
       <ScrollView
         style={styles.container}
         contentContainerStyle={styles.content}
@@ -375,6 +386,34 @@ export default function BoardDetailScreen() {
                 </TouchableOpacity>
               </View>
               <Text style={styles.sheetCountHint}>최대 {remaining}개까지 한 번에 줄 수 있어요</Text>
+            </View>
+
+            {/* 사진 인증 (선택) */}
+            <View style={styles.sheetFieldWrap}>
+              <Text style={styles.sheetFieldLabel}>인증 사진 (선택)</Text>
+              <TouchableOpacity
+                style={styles.photoBtn}
+                onPress={async () => {
+                  const result = await ImagePicker.launchImageLibraryAsync({
+                    mediaTypes: ['images'],
+                    allowsEditing: true,
+                    aspect: [4, 3],
+                    quality: 0.5,
+                  });
+                  if (!result.canceled && result.assets[0]) {
+                    setProofPhotoUri(result.assets[0].uri);
+                  }
+                }}
+              >
+                {proofPhotoUri ? (
+                  <Image source={{ uri: proofPhotoUri }} style={styles.photoPreview} />
+                ) : (
+                  <View style={styles.photoPlaceholder}>
+                    <Text style={styles.photoPlaceholderIcon}>📷</Text>
+                    <Text style={styles.photoPlaceholderText}>인증샷 첨부하기</Text>
+                  </View>
+                )}
+              </TouchableOpacity>
             </View>
 
             <TouchableOpacity
@@ -611,6 +650,11 @@ const styles = StyleSheet.create({
   sheetCountBtnText: { fontSize: 22, fontWeight: '700', color: Colors.text },
   sheetCountInput: { width: 64, height: 44, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, textAlign: 'center', fontSize: 20, fontWeight: '700', color: Colors.text, backgroundColor: Colors.surface },
   sheetCountHint: { fontSize: 12, color: Colors.textLight, textAlign: 'center' },
+  photoBtn: { width: '100%', borderRadius: 14, overflow: 'hidden', borderWidth: 1, borderColor: Colors.border },
+  photoPreview: { width: '100%', height: 160, borderRadius: 14 },
+  photoPlaceholder: { height: 80, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F8F8F8', gap: 4 },
+  photoPlaceholderIcon: { fontSize: 24 },
+  photoPlaceholderText: { fontSize: 13, color: Colors.textLight, fontWeight: '600' },
   sheetInput: {
     width: '100%', backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border,
     borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: Colors.text,
