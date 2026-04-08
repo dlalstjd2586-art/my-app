@@ -27,7 +27,8 @@ export default function BoardDetailScreen() {
   const { isDemoMode } = useDemoStore();
 
   const [showStickerSheet, setShowStickerSheet] = useState(false);
-  const [memo, setMemo] = useState('');
+  const [reason, setReason] = useState('');       // 칭찬 이유 (필수)
+  const [stickerCount, setStickerCount] = useState('1');  // 줄 개수
   const [isGiving, setIsGiving] = useState(false);
   const [showCelebration, setShowCelebration] = useState(false);
 
@@ -89,35 +90,63 @@ export default function BoardDetailScreen() {
   };
 
   const handleGiveSticker = async () => {
+    if (!reason.trim()) {
+      Alert.alert('알림', '칭찬 이유를 적어주세요!');
+      return;
+    }
+
+    const count = Math.max(1, Math.min(parseInt(stickerCount) || 1, remaining));
+
     if (isDemoMode) {
       setIsGiving(true);
       await new Promise(r => setTimeout(r, 500));
-      const newCount = board.current_count + 1;
+
+      const newStickers: Sticker[] = [];
+      for (let i = 0; i < count; i++) {
+        const seq = board.current_count + i + 1;
+        newStickers.push({
+          id: `demo-new-${seq}`,
+          board_id: board.id,
+          giver_id: DEMO_USER.id,
+          memo: i === 0 ? reason.trim() : null,
+          sequence: seq,
+          created_at: new Date().toISOString(),
+        });
+      }
+
+      const newCount = board.current_count + count;
       const goalAchieved = newCount >= board.target_count;
-      const newSticker: Sticker = {
-        id: `demo-new-${newCount}`,
-        board_id: board.id,
-        giver_id: DEMO_USER.id,
-        memo: memo.trim() || null,
-        sequence: newCount,
-        created_at: new Date().toISOString(),
-      };
-      setDemoStickers(prev => [...prev, newSticker]);
+
+      setDemoStickers(prev => [...prev, ...newStickers]);
       setDemoBoard(prev => prev ? { ...prev, current_count: newCount, status: goalAchieved ? 'success' : prev.status } : prev);
       setIsGiving(false);
       setShowStickerSheet(false);
-      setMemo('');
+      setReason('');
+      setStickerCount('1');
       if (goalAchieved) setShowCelebration(true);
       return;
     }
+
+    // 실제 모드: 서버에 한 개씩 전송 (여러 개일 경우 반복)
     setIsGiving(true);
-    const result = await giveSticker(board.id, memo.trim() || undefined);
+    let lastGoalAchieved = false;
+    for (let i = 0; i < count; i++) {
+      const result = await giveSticker(board.id, i === 0 ? reason.trim() : undefined);
+      if (!result.success) {
+        Alert.alert('오류', result.error);
+        break;
+      }
+      if (result.goalAchieved) { lastGoalAchieved = true; break; }
+    }
     setIsGiving(false);
     setShowStickerSheet(false);
-    setMemo('');
-    if (result.success && result.goalAchieved) setShowCelebration(true);
-    else if (!result.success) Alert.alert('오류', result.error);
+    setReason('');
+    setStickerCount('1');
+    if (lastGoalAchieved) setShowCelebration(true);
   };
+
+  // 남은 스티커 수
+  const remaining = board.target_count - board.current_count;
 
   // 스티커 그리드: 5열 기준
   const cols = 5;
@@ -304,26 +333,63 @@ export default function BoardDetailScreen() {
               )}
             </View>
 
-            <Text style={styles.sheetCount}>{board.current_count + 1}번째 스티커</Text>
+            <Text style={styles.sheetCount}>현재 {board.current_count}개 / 목표 {board.target_count}개 (남은 {remaining}개)</Text>
 
-            <TextInput
-              style={styles.sheetInput}
-              placeholder="칭찬 한 마디 남기기 (선택)"
-              placeholderTextColor={Colors.textLight}
-              value={memo}
-              onChangeText={setMemo}
-              maxLength={100}
-            />
+            {/* 칭찬 이유 (필수) */}
+            <View style={styles.sheetFieldWrap}>
+              <Text style={styles.sheetFieldLabel}>칭찬 이유 <Text style={{ color: Colors.error }}>*</Text></Text>
+              <TextInput
+                style={styles.sheetInput}
+                placeholder="예: 오늘 운동 1시간 했어!"
+                placeholderTextColor={Colors.textLight}
+                value={reason}
+                onChangeText={setReason}
+                maxLength={100}
+              />
+            </View>
+
+            {/* 스티커 개수 */}
+            <View style={styles.sheetFieldWrap}>
+              <Text style={styles.sheetFieldLabel}>줄 스티커 개수</Text>
+              <View style={styles.sheetCountRow}>
+                <TouchableOpacity
+                  style={styles.sheetCountBtn}
+                  onPress={() => setStickerCount(String(Math.max(1, (parseInt(stickerCount) || 1) - 1)))}
+                >
+                  <Text style={styles.sheetCountBtnText}>-</Text>
+                </TouchableOpacity>
+                <TextInput
+                  style={styles.sheetCountInput}
+                  value={stickerCount}
+                  onChangeText={(t) => {
+                    const num = parseInt(t) || 0;
+                    if (num > remaining) setStickerCount(String(remaining));
+                    else setStickerCount(t.replace(/[^0-9]/g, ''));
+                  }}
+                  keyboardType="number-pad"
+                  maxLength={3}
+                />
+                <TouchableOpacity
+                  style={styles.sheetCountBtn}
+                  onPress={() => setStickerCount(String(Math.min(remaining, (parseInt(stickerCount) || 1) + 1)))}
+                >
+                  <Text style={styles.sheetCountBtnText}>+</Text>
+                </TouchableOpacity>
+              </View>
+              <Text style={styles.sheetCountHint}>최대 {remaining}개까지 한 번에 줄 수 있어요</Text>
+            </View>
 
             <TouchableOpacity
-              style={[styles.sheetButton, { backgroundColor: theme.accent }, isGiving && { opacity: 0.5 }]}
+              style={[styles.sheetButton, { backgroundColor: theme.accent }, (!reason.trim() || isGiving) && { opacity: 0.5 }]}
               onPress={handleGiveSticker}
-              disabled={isGiving}
+              disabled={!reason.trim() || isGiving}
             >
-              <Text style={styles.sheetButtonText}>{isGiving ? '붙이는 중...' : `${stickerEmoji} 스티커 붙이기!`}</Text>
+              <Text style={styles.sheetButtonText}>
+                {isGiving ? '붙이는 중...' : `${stickerEmoji} 스티커 ${parseInt(stickerCount) || 1}개 붙이기!`}
+              </Text>
             </TouchableOpacity>
 
-            <TouchableOpacity onPress={() => { setShowStickerSheet(false); setMemo(''); }}>
+            <TouchableOpacity onPress={() => { setShowStickerSheet(false); setReason(''); setStickerCount('1'); }}>
               <Text style={styles.sheetCancel}>취소</Text>
             </TouchableOpacity>
           </View>
@@ -539,7 +605,14 @@ const styles = StyleSheet.create({
   sheetStickerPreview: { width: 80, height: 80, borderRadius: 40, alignItems: 'center', justifyContent: 'center' },
   sheetStickerEmoji: { fontSize: 44 },
   sheetStickerImage: { width: 64, height: 64, borderRadius: 32 },
-  sheetCount: { fontSize: 16, color: Colors.textSecondary, fontWeight: '600' },
+  sheetCount: { fontSize: 14, color: Colors.textSecondary, fontWeight: '600', textAlign: 'center' },
+  sheetFieldWrap: { width: '100%', gap: 6 },
+  sheetFieldLabel: { fontSize: 14, fontWeight: '700', color: Colors.text },
+  sheetCountRow: { flexDirection: 'row', alignItems: 'center', gap: 12, justifyContent: 'center' },
+  sheetCountBtn: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.border, alignItems: 'center', justifyContent: 'center' },
+  sheetCountBtnText: { fontSize: 22, fontWeight: '700', color: Colors.text },
+  sheetCountInput: { width: 64, height: 44, borderRadius: 12, borderWidth: 1, borderColor: Colors.border, textAlign: 'center', fontSize: 20, fontWeight: '700', color: Colors.text, backgroundColor: Colors.surface },
+  sheetCountHint: { fontSize: 12, color: Colors.textLight, textAlign: 'center' },
   sheetInput: {
     width: '100%', backgroundColor: Colors.background, borderWidth: 1, borderColor: Colors.border,
     borderRadius: 14, paddingHorizontal: 16, paddingVertical: 14, fontSize: 16, color: Colors.text,
