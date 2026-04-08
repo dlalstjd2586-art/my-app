@@ -33,7 +33,15 @@ export default function LoginScreen() {
         <View style={styles.buttonArea}>
           {/* Demo Mode - 가장 눈에 띄게 */}
           <TouchableOpacity style={styles.demoButton} onPress={handleDemoMode}>
-            <Text style={styles.demoButtonText}>데모 모드로 체험하기</Text>
+            <Text style={styles.demoButtonText}>⭐ 데모 모드로 체험하기</Text>
+          </TouchableOpacity>
+
+          {/* 초대코드 연결 체험 */}
+          <TouchableOpacity style={styles.inviteButton} onPress={() => {
+            enableDemo();
+            router.replace('/connect');
+          }}>
+            <Text style={styles.inviteButtonText}>💌 초대코드 연결 체험하기</Text>
           </TouchableOpacity>
 
           <View style={styles.dividerRow}>
@@ -100,6 +108,19 @@ const styles = StyleSheet.create({
   demoButtonText: {
     color: '#fff',
     fontSize: 18,
+    fontWeight: '700',
+  },
+  inviteButton: {
+    backgroundColor: Colors.surface,
+    borderRadius: 12,
+    paddingVertical: 14,
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+  },
+  inviteButtonText: {
+    color: Colors.primary,
+    fontSize: 16,
     fontWeight: '700',
   },
   dividerRow: {

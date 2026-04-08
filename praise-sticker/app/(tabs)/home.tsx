@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Colors, StickerPresets } from '@/constants/Colors';
 import { useAuthStore } from '@/stores/authStore';
@@ -7,6 +7,7 @@ import { useRelationshipStore } from '@/stores/relationshipStore';
 import { useBoardStore } from '@/stores/boardStore';
 import { useDemoStore } from '@/stores/demoStore';
 import { DEMO_USER, DEMO_PARTNER, type DemoBoardWithDetails } from '@/lib/demo-data';
+import ConfirmModal from '@/components/ConfirmModal';
 
 export default function HomeScreen() {
   const router = useRouter();
@@ -15,6 +16,9 @@ export default function HomeScreen() {
   const { boards, isLoading, fetchBoards, checkExpiredBoards } = useBoardStore();
   const { isDemoMode, activeBoards: demoBoards, deleteBoard } = useDemoStore();
   const [refreshing, setRefreshing] = useState(false);
+
+  // 삭제 모달 상태
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
   useEffect(() => {
     if (!isDemoMode) fetchBoards();
@@ -36,26 +40,12 @@ export default function HomeScreen() {
   const activeBoardsList = displayBoards.filter(b => b.status === 'active');
   const draftBoardsList = displayBoards.filter(b => b.status === 'draft');
 
-  const handleDeleteBoard = (boardId: string, title: string) => {
-    Alert.alert(
-      '스티커판 삭제',
-      `"${title}" 스티커판을 삭제할까요?`,
-      [
-        { text: '취소', style: 'cancel' },
-        {
-          text: '삭제',
-          style: 'destructive',
-          onPress: () => {
-            if (isDemoMode) {
-              deleteBoard(boardId);
-            } else {
-              // TODO: 실제 모드에서는 서버에 cancel 요청
-              Alert.alert('알림', '삭제 기능은 준비 중이에요');
-            }
-          },
-        },
-      ]
-    );
+  const handleConfirmDelete = () => {
+    if (!deleteTarget) return;
+    if (isDemoMode) {
+      deleteBoard(deleteTarget.id);
+    }
+    setDeleteTarget(null);
   };
 
   const getDaysLeft = (endDate: string) => {
@@ -71,92 +61,105 @@ export default function HomeScreen() {
     StickerPresets.find(s => s.id === preset)?.emoji ?? '⭐';
 
   return (
-    <ScrollView
-      style={styles.container}
-      contentContainerStyle={styles.content}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-    >
-      {isDemoMode && (
-        <View style={styles.demoBanner}>
-          <Text style={styles.demoBannerText}>데모 모드 - 가짜 데이터로 체험 중</Text>
+    <>
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+      >
+        {isDemoMode && (
+          <View style={styles.demoBanner}>
+            <Text style={styles.demoBannerText}>데모 모드 - 가짜 데이터로 체험 중</Text>
+          </View>
+        )}
+
+        {/* Partner */}
+        <View style={styles.partnerCard}>
+          <Text style={styles.partnerEmoji}>💑</Text>
+          <View>
+            <Text style={styles.partnerLabel}>나의 파트너</Text>
+            <Text style={styles.partnerName}>{displayPartner?.nickname ?? '...'}</Text>
+          </View>
         </View>
-      )}
 
-      {/* Partner */}
-      <View style={styles.partnerCard}>
-        <Text style={styles.partnerEmoji}>💑</Text>
-        <View>
-          <Text style={styles.partnerLabel}>나의 파트너</Text>
-          <Text style={styles.partnerName}>{displayPartner?.nickname ?? '...'}</Text>
-        </View>
-      </View>
+        {/* Draft Boards */}
+        {draftBoardsList.map(board => (
+          <View key={board.id} style={[styles.boardCard, styles.boardCardDraft]}>
+            <TouchableOpacity style={styles.boardCardContent} onPress={() => router.push(`/board/${board.id}`)}>
+              <View style={styles.draftBadge}>
+                <Text style={styles.draftBadgeText}>수락 대기</Text>
+              </View>
+              <Text style={styles.boardTitle}>{board.title}</Text>
+              <Text style={styles.boardMeta}>
+                {getStickerEmoji(board.sticker_preset)} 목표 {board.target_count}개
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.deleteBtn} onPress={() => setDeleteTarget({ id: board.id, title: board.title })}>
+              <Text style={styles.deleteBtnText}>🗑️</Text>
+            </TouchableOpacity>
+          </View>
+        ))}
 
-      {/* Draft Boards */}
-      {draftBoardsList.map(board => (
-        <View key={board.id} style={[styles.boardCard, styles.boardCardDraft]}>
-          <TouchableOpacity style={styles.boardCardContent} onPress={() => router.push(`/board/${board.id}`)}>
-            <View style={styles.draftBadge}>
-              <Text style={styles.draftBadgeText}>수락 대기</Text>
-            </View>
-            <Text style={styles.boardTitle}>{board.title}</Text>
-            <Text style={styles.boardMeta}>
-              {getStickerEmoji(board.sticker_preset)} 목표 {board.target_count}개
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteBoard(board.id, board.title)}>
-            <Text style={styles.deleteBtnText}>🗑️</Text>
-          </TouchableOpacity>
-        </View>
-      ))}
+        {/* Active Boards */}
+        {activeBoardsList.length > 0 ? (
+          activeBoardsList.map(board => {
+            const daysLeft = getDaysLeft(board.end_date);
+            const percent = getProgressPercent(board.current_count, board.target_count);
 
-      {/* Active Boards */}
-      {activeBoardsList.length > 0 ? (
-        activeBoardsList.map(board => {
-          const daysLeft = getDaysLeft(board.end_date);
-          const percent = getProgressPercent(board.current_count, board.target_count);
-
-          return (
-            <View key={board.id} style={styles.boardCard}>
-              <TouchableOpacity style={styles.boardCardContent} onPress={() => router.push(`/board/${board.id}`)}>
-                <View style={styles.boardHeader}>
-                  <Text style={styles.boardTitle}>{board.title}</Text>
-                  <Text style={[styles.daysLeft, daysLeft <= 3 && styles.daysLeftUrgent]}>
-                    D-{daysLeft > 0 ? daysLeft : 0}
-                  </Text>
-                </View>
-
-                <View style={styles.progressContainer}>
-                  <View style={styles.progressBar}>
-                    <View style={[styles.progressFill, { width: `${percent}%` }]} />
+            return (
+              <View key={board.id} style={styles.boardCard}>
+                <TouchableOpacity style={styles.boardCardContent} onPress={() => router.push(`/board/${board.id}`)}>
+                  <View style={styles.boardHeader}>
+                    <Text style={styles.boardTitle}>{board.title}</Text>
+                    <Text style={[styles.daysLeft, daysLeft <= 3 && styles.daysLeftUrgent]}>
+                      D-{daysLeft > 0 ? daysLeft : 0}
+                    </Text>
                   </View>
-                  <Text style={styles.progressText}>
-                    {getStickerEmoji(board.sticker_preset)} {board.current_count}/{board.target_count}
-                  </Text>
-                </View>
 
-                {board.rewards && board.rewards.length > 0 && (
-                  <Text style={styles.rewardPreview}>🎁 {board.rewards[0].description}</Text>
-                )}
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.deleteBtn} onPress={() => handleDeleteBoard(board.id, board.title)}>
-                <Text style={styles.deleteBtnText}>🗑️</Text>
-              </TouchableOpacity>
-            </View>
-          );
-        })
-      ) : draftBoardsList.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyEmoji}>📋</Text>
-          <Text style={styles.emptyTitle}>아직 스티커판이 없어요</Text>
-          <Text style={styles.emptySubtitle}>첫 스티커판을 만들어보세요!</Text>
-        </View>
-      ) : null}
+                  <View style={styles.progressContainer}>
+                    <View style={styles.progressBar}>
+                      <View style={[styles.progressFill, { width: `${percent}%` }]} />
+                    </View>
+                    <Text style={styles.progressText}>
+                      {getStickerEmoji(board.sticker_preset)} {board.current_count}/{board.target_count}
+                    </Text>
+                  </View>
 
-      {/* Create Button */}
-      <TouchableOpacity style={styles.createButton} onPress={() => router.push('/board/create')}>
-        <Text style={styles.createButtonText}>+ 새 스티커판 만들기</Text>
-      </TouchableOpacity>
-    </ScrollView>
+                  {board.rewards && board.rewards.length > 0 && (
+                    <Text style={styles.rewardPreview}>🎁 {board.rewards[0].description}</Text>
+                  )}
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.deleteBtn} onPress={() => setDeleteTarget({ id: board.id, title: board.title })}>
+                  <Text style={styles.deleteBtnText}>🗑️</Text>
+                </TouchableOpacity>
+              </View>
+            );
+          })
+        ) : draftBoardsList.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyEmoji}>📋</Text>
+            <Text style={styles.emptyTitle}>아직 스티커판이 없어요</Text>
+            <Text style={styles.emptySubtitle}>첫 스티커판을 만들어보세요!</Text>
+          </View>
+        ) : null}
+
+        {/* Create Button */}
+        <TouchableOpacity style={styles.createButton} onPress={() => router.push('/board/create')}>
+          <Text style={styles.createButtonText}>+ 새 스티커판 만들기</Text>
+        </TouchableOpacity>
+      </ScrollView>
+
+      {/* 삭제 확인 모달 */}
+      <ConfirmModal
+        visible={!!deleteTarget}
+        title="스티커판 삭제"
+        message={`"${deleteTarget?.title}" 스티커판을 삭제할까요?\n삭제하면 되돌릴 수 없어요.`}
+        confirmText="삭제"
+        confirmColor={Colors.error}
+        onConfirm={handleConfirmDelete}
+        onCancel={() => setDeleteTarget(null)}
+      />
+    </>
   );
 }
 
