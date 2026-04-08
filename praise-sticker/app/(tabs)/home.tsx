@@ -187,6 +187,10 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: Colors.warning,
   },
+  boardMeta: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
   boardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',

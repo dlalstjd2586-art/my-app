@@ -19,6 +19,7 @@ interface BoardState {
   acceptBoard: (boardId: string) => Promise<{ success: boolean; error?: string }>;
   giveSticker: (boardId: string, memo?: string) => Promise<{ success: boolean; goalAchieved?: boolean; error?: string }>;
   completeReward: (rewardId: string) => Promise<void>;
+  completePenalty: (penaltyId: string) => Promise<void>;
   checkExpiredBoards: () => Promise<void>;
 }
 
@@ -76,8 +77,8 @@ export const useBoardStore = create<BoardState>((set, get) => ({
       .order('sequence', { ascending: true });
 
     set({
-      currentBoard: board as BoardWithDetails | null,
-      stickers: stickers ?? [],
+      currentBoard: (board as BoardWithDetails) ?? null,
+      stickers: (stickers as Sticker[]) ?? [],
       isLoading: false,
     });
   },
@@ -131,8 +132,19 @@ export const useBoardStore = create<BoardState>((set, get) => ({
     }
   },
 
+  completePenalty: async (penaltyId: string) => {
+    // Direct update via client (penalty completion)
+    await supabase
+      .from('penalties')
+      .update({ status: 'completed', completed_at: new Date().toISOString() })
+      .eq('id', penaltyId);
+
+    if (get().currentBoard) {
+      await get().fetchBoardDetail(get().currentBoard!.id);
+    }
+  },
+
   checkExpiredBoards: async () => {
-    // Client-side expiry check (MVP alternative to cron)
     const today = new Date().toISOString().split('T')[0];
 
     const { data: expiredBoards } = await supabase
@@ -146,13 +158,12 @@ export const useBoardStore = create<BoardState>((set, get) => ({
         await supabase
           .from('sticker_boards')
           .update({ status: 'failed' })
-          .eq('id', board.id);
+          .eq('id', (board as { id: string }).id);
 
-        // Activate penalty if exists
         await supabase
           .from('penalties')
           .update({ status: 'pending' })
-          .eq('board_id', board.id)
+          .eq('board_id', (board as { id: string }).id)
           .eq('status', 'inactive');
       }
 

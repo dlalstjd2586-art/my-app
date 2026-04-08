@@ -8,7 +8,7 @@ import { useBoardStore } from '@/stores/boardStore';
 export default function BoardDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { user } = useAuthStore();
-  const { currentBoard, stickers, isLoading, fetchBoardDetail, acceptBoard, giveSticker, completeReward } = useBoardStore();
+  const { currentBoard, stickers, isLoading, fetchBoardDetail, acceptBoard, giveSticker, completeReward, completePenalty } = useBoardStore();
 
   const [showStickerSheet, setShowStickerSheet] = useState(false);
   const [memo, setMemo] = useState('');
@@ -175,7 +175,17 @@ export default function BoardDetailScreen() {
               <Text style={styles.infoLabel}>⚡ 실패 패널티</Text>
               <Text style={styles.infoValue}>{penalty.description}</Text>
               {penalty.status === 'pending' && (
-                <Text style={styles.penaltyPending}>패널티 이행 대기 중</Text>
+                <TouchableOpacity
+                  style={[styles.completeButton, { backgroundColor: Colors.warning }]}
+                  onPress={() => {
+                    Alert.alert('패널티 완료', '패널티를 이행했나요?', [
+                      { text: '아직이요', style: 'cancel' },
+                      { text: '완료!', onPress: () => completePenalty(penalty.id) },
+                    ]);
+                  }}
+                >
+                  <Text style={styles.completeButtonText}>패널티 완료 확인</Text>
+                </TouchableOpacity>
               )}
               {penalty.status === 'completed' && (
                 <Text style={styles.completedBadge}>✅ 이행 완료</Text>

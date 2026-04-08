@@ -42,9 +42,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       return;
     }
 
+    const user = data as User;
     set({
-      user: data,
-      isProfileComplete: !!data.nickname,
+      user,
+      isProfileComplete: !!user.nickname,
       isLoading: false,
     });
   },
@@ -53,7 +54,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     const { session } = get();
     if (!session?.user?.id) return;
 
-    // Upsert: create if not exists, update if exists
     const { data, error } = await supabase
       .from('users')
       .upsert({
@@ -65,7 +65,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       .single();
 
     if (!error && data) {
-      set({ user: data, isProfileComplete: true });
+      set({ user: data as User, isProfileComplete: true });
     }
   },
 
@@ -86,7 +86,6 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       set({ isLoading: false });
     }
 
-    // Listen for auth changes
     supabase.auth.onAuthStateChange(async (_event, session) => {
       set({ session });
       if (session) {

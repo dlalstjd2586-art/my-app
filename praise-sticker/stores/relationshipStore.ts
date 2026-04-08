@@ -43,15 +43,17 @@ export const useRelationshipStore = create<RelationshipState>((set, get) => ({
       return;
     }
 
+    const relationship = rel as Relationship;
+
     const { data: partnerData } = await supabase
       .from('users')
       .select('*')
-      .eq('id', rel.partner_id)
+      .eq('id', relationship.partner_id)
       .single();
 
     set({
-      relationship: rel,
-      partner: partnerData ?? null,
+      relationship,
+      partner: (partnerData as User) ?? null,
       isLoading: false,
     });
   },
@@ -60,7 +62,7 @@ export const useRelationshipStore = create<RelationshipState>((set, get) => ({
     const { data, error } = await supabase.functions.invoke('create-invite');
     if (error || !data) return null;
     set({ inviteCode: data.code, inviteExpiresAt: data.expires_at });
-    return data.code;
+    return data.code as string;
   },
 
   acceptInviteCode: async (code: string) => {
@@ -72,7 +74,6 @@ export const useRelationshipStore = create<RelationshipState>((set, get) => ({
       return { success: false, error: error.message ?? '연결에 실패했어요' };
     }
 
-    // Refresh relationship
     await get().fetchRelationship();
     return { success: true };
   },

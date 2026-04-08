@@ -117,22 +117,3 @@ export interface Notification {
   is_read: boolean;
   created_at: string;
 }
-
-// Supabase Database type for client generation
-export interface Database {
-  public: {
-    Tables: {
-      users: { Row: User; Insert: Partial<User> & Pick<User, 'id' | 'nickname' | 'auth_provider'>; Update: Partial<User> };
-      invite_codes: { Row: InviteCode; Insert: Partial<InviteCode>; Update: Partial<InviteCode> };
-      relationships: { Row: Relationship; Insert: Partial<Relationship>; Update: Partial<Relationship> };
-      sticker_boards: { Row: StickerBoard; Insert: Partial<StickerBoard>; Update: Partial<StickerBoard> };
-      stickers: { Row: Sticker; Insert: Partial<Sticker>; Update: Partial<Sticker> };
-      rewards: { Row: Reward; Insert: Partial<Reward>; Update: Partial<Reward> };
-      penalties: { Row: Penalty; Insert: Partial<Penalty>; Update: Partial<Penalty> };
-      notifications: { Row: Notification; Insert: Partial<Notification>; Update: Partial<Notification> };
-    };
-    Views: {};
-    Functions: {};
-    Enums: {};
-  };
-}
