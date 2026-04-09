@@ -9,27 +9,22 @@ import { useDemoStore } from '@/stores/demoStore';
 import { DEMO_USER, DEMO_PARTNER, type DemoBoardWithDetails } from '@/lib/demo-data';
 import ConfirmModal from '@/components/ConfirmModal';
 
+const BOARD_COLORS = ['#6C5CE7', '#FF6B6B', '#00B894', '#FDCB6E', '#E056A0', '#00D2D3'];
+
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
   const { partner } = useRelationshipStore();
-  const { boards, isLoading, fetchBoards, checkExpiredBoards } = useBoardStore();
+  const { boards, fetchBoards, checkExpiredBoards } = useBoardStore();
   const { isDemoMode, activeBoards: demoBoards, deleteBoard } = useDemoStore();
   const [refreshing, setRefreshing] = useState(false);
-
-  // 삭제 모달 상태
   const [deleteTarget, setDeleteTarget] = useState<{ id: string; title: string } | null>(null);
 
-  useEffect(() => {
-    if (!isDemoMode) fetchBoards();
-  }, [isDemoMode]);
+  useEffect(() => { if (!isDemoMode) fetchBoards(); }, [isDemoMode]);
 
   const onRefresh = async () => {
     setRefreshing(true);
-    if (!isDemoMode) {
-      await checkExpiredBoards();
-      await fetchBoards();
-    }
+    if (!isDemoMode) { await checkExpiredBoards(); await fetchBoards(); }
     setRefreshing(false);
   };
 
@@ -40,123 +35,110 @@ export default function HomeScreen() {
   const activeBoardsList = displayBoards.filter(b => b.status === 'active');
   const draftBoardsList = displayBoards.filter(b => b.status === 'draft');
 
-  const handleConfirmDelete = () => {
-    if (!deleteTarget) return;
-    if (isDemoMode) {
-      deleteBoard(deleteTarget.id);
-    }
-    setDeleteTarget(null);
-  };
-
-  const getDaysLeft = (endDate: string) => {
-    const end = new Date(endDate);
-    const now = new Date();
-    return Math.ceil((end.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  };
-
-  const getProgressPercent = (current: number, target: number) =>
-    Math.min(Math.round((current / target) * 100), 100);
-
-  const getStickerEmoji = (preset: string) =>
-    StickerPresets.find(s => s.id === preset)?.emoji ?? '⭐';
+  const getDaysLeft = (endDate: string) => Math.ceil((new Date(endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  const getPercent = (c: number, t: number) => Math.min(Math.round((c / t) * 100), 100);
+  const getEmoji = (preset: string) => StickerPresets.find(s => s.id === preset)?.emoji ?? '⭐';
+  const getColor = (id: string) => BOARD_COLORS[id.charCodeAt(id.length - 1) % BOARD_COLORS.length];
 
   return (
     <>
-      <ScrollView
-        style={styles.container}
-        contentContainerStyle={styles.content}
-        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-      >
+      <ScrollView style={styles.container} contentContainerStyle={styles.content}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={Colors.primary} />}>
+
         {isDemoMode && (
           <View style={styles.demoBanner}>
-            <Text style={styles.demoBannerText}>데모 모드 - 가짜 데이터로 체험 중</Text>
+            <Text style={styles.demoBannerText}>🔍 데모 모드 체험 중</Text>
           </View>
         )}
 
-        {/* Partner */}
+        {/* 파트너 카드 */}
         <View style={styles.partnerCard}>
-          <Text style={styles.partnerEmoji}>💑</Text>
-          <View>
-            <Text style={styles.partnerLabel}>나의 파트너</Text>
-            <Text style={styles.partnerName}>{displayPartner?.nickname ?? '...'}</Text>
+          <View style={styles.partnerLeft}>
+            <View style={styles.partnerAvatarMe}><Text style={styles.avatarText}>{displayUser?.nickname?.[0] ?? '?'}</Text></View>
+            <View style={styles.partnerHeart}><Text style={{ fontSize: 14 }}>💜</Text></View>
+            <View style={styles.partnerAvatarPartner}><Text style={styles.avatarText}>{displayPartner?.nickname?.[0] ?? '?'}</Text></View>
+          </View>
+          <View style={styles.partnerRight}>
+            <Text style={styles.partnerNames}>{displayUser?.nickname} & {displayPartner?.nickname}</Text>
+            <Text style={styles.partnerLabel}>진행 중 {activeBoardsList.length}개</Text>
           </View>
         </View>
 
-        {/* Draft Boards */}
-        {draftBoardsList.map(board => (
-          <View key={board.id} style={[styles.boardCard, styles.boardCardDraft]}>
-            <TouchableOpacity style={styles.boardCardContent} onPress={() => router.push(`/board/${board.id}`)}>
-              <View style={styles.draftBadge}>
-                <Text style={styles.draftBadgeText}>수락 대기</Text>
+        {/* 진행 중 보드 */}
+        {activeBoardsList.map((board, idx) => {
+          const daysLeft = getDaysLeft(board.end_date);
+          const percent = getPercent(board.current_count, board.target_count);
+          const color = getColor(board.id);
+
+          return (
+            <TouchableOpacity key={board.id} style={styles.boardCard} onPress={() => router.push(`/board/${board.id}`)} activeOpacity={0.7}>
+              <View style={[styles.boardColorBar, { backgroundColor: color }]} />
+              <View style={styles.boardBody}>
+                <View style={styles.boardTop}>
+                  <View style={styles.boardTitleRow}>
+                    <Text style={styles.boardEmoji}>{getEmoji(board.sticker_preset)}</Text>
+                    <Text style={styles.boardTitle} numberOfLines={1}>{board.title}</Text>
+                  </View>
+                  <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    onPress={(e) => { e.stopPropagation(); setDeleteTarget({ id: board.id, title: board.title }); }}>
+                    <Text style={styles.deleteIcon}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+
+                <View style={styles.progressRow}>
+                  <View style={styles.progressBarBg}>
+                    <View style={[styles.progressBarFill, { width: `${percent}%`, backgroundColor: color }]} />
+                  </View>
+                  <Text style={[styles.progressPercent, { color }]}>{percent}%</Text>
+                </View>
+
+                <View style={styles.boardBottom}>
+                  <Text style={styles.boardCount}>{board.current_count}/{board.target_count}개</Text>
+                  <Text style={[styles.boardDday, daysLeft <= 3 && { color: Colors.error }]}>
+                    D-{Math.max(daysLeft, 0)}
+                  </Text>
+                </View>
+
+                {board.rewards?.[0] && (
+                  <Text style={styles.boardReward} numberOfLines={1}>🎁 {board.rewards[0].description}</Text>
+                )}
               </View>
+            </TouchableOpacity>
+          );
+        })}
+
+        {/* 대기 중 보드 */}
+        {draftBoardsList.map(board => (
+          <TouchableOpacity key={board.id} style={[styles.boardCard, styles.draftCard]}
+            onPress={() => router.push(`/board/${board.id}`)}>
+            <View style={[styles.boardColorBar, { backgroundColor: Colors.warning }]} />
+            <View style={styles.boardBody}>
+              <View style={styles.draftBadge}><Text style={styles.draftBadgeText}>수락 대기</Text></View>
               <Text style={styles.boardTitle}>{board.title}</Text>
-              <Text style={styles.boardMeta}>
-                {getStickerEmoji(board.sticker_preset)} 목표 {board.target_count}개
-              </Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.deleteBtn} onPress={() => setDeleteTarget({ id: board.id, title: board.title })}>
-              <Text style={styles.deleteBtnText}>🗑️</Text>
-            </TouchableOpacity>
-          </View>
+            </View>
+          </TouchableOpacity>
         ))}
 
-        {/* Active Boards */}
-        {activeBoardsList.length > 0 ? (
-          activeBoardsList.map(board => {
-            const daysLeft = getDaysLeft(board.end_date);
-            const percent = getProgressPercent(board.current_count, board.target_count);
-
-            return (
-              <View key={board.id} style={styles.boardCard}>
-                <TouchableOpacity style={styles.boardCardContent} onPress={() => router.push(`/board/${board.id}`)}>
-                  <View style={styles.boardHeader}>
-                    <Text style={styles.boardTitle}>{board.title}</Text>
-                    <Text style={[styles.daysLeft, daysLeft <= 3 && styles.daysLeftUrgent]}>
-                      D-{daysLeft > 0 ? daysLeft : 0}
-                    </Text>
-                  </View>
-
-                  <View style={styles.progressContainer}>
-                    <View style={styles.progressBar}>
-                      <View style={[styles.progressFill, { width: `${percent}%` }]} />
-                    </View>
-                    <Text style={styles.progressText}>
-                      {getStickerEmoji(board.sticker_preset)} {board.current_count}/{board.target_count}
-                    </Text>
-                  </View>
-
-                  {board.rewards && board.rewards.length > 0 && (
-                    <Text style={styles.rewardPreview}>🎁 {board.rewards[0].description}</Text>
-                  )}
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.deleteBtn} onPress={() => setDeleteTarget({ id: board.id, title: board.title })}>
-                  <Text style={styles.deleteBtnText}>🗑️</Text>
-                </TouchableOpacity>
-              </View>
-            );
-          })
-        ) : draftBoardsList.length === 0 ? (
+        {/* 빈 상태 */}
+        {activeBoardsList.length === 0 && draftBoardsList.length === 0 && (
           <View style={styles.emptyState}>
-            <Text style={styles.emptyEmoji}>📋</Text>
+            <Text style={styles.emptyEmoji}>🌟</Text>
             <Text style={styles.emptyTitle}>아직 스티커판이 없어요</Text>
-            <Text style={styles.emptySubtitle}>첫 스티커판을 만들어보세요!</Text>
+            <Text style={styles.emptySubtitle}>아래 버튼을 눌러 첫 스티커판을 만들어보세요!</Text>
           </View>
-        ) : null}
+        )}
 
-        {/* Create Button */}
-        <TouchableOpacity style={styles.createButton} onPress={() => router.push('/board/create')}>
-          <Text style={styles.createButtonText}>+ 새 스티커판 만들기</Text>
+        {/* 만들기 버튼 */}
+        <TouchableOpacity style={styles.createBtn} onPress={() => router.push('/board/create')} activeOpacity={0.8}>
+          <Text style={styles.createBtnText}>+ 새 스티커판 만들기</Text>
         </TouchableOpacity>
       </ScrollView>
 
-      {/* 삭제 확인 모달 */}
       <ConfirmModal
-        visible={!!deleteTarget}
-        title="스티커판 삭제"
-        message={`"${deleteTarget?.title}" 스티커판을 삭제할까요?\n삭제하면 되돌릴 수 없어요.`}
-        confirmText="삭제"
-        confirmColor={Colors.error}
-        onConfirm={handleConfirmDelete}
+        visible={!!deleteTarget} title="스티커판 삭제"
+        message={`"${deleteTarget?.title}" 스티커판을 삭제할까요?`}
+        confirmText="삭제" confirmColor={Colors.error}
+        onConfirm={() => { if (deleteTarget) { deleteBoard(deleteTarget.id); setDeleteTarget(null); } }}
         onCancel={() => setDeleteTarget(null)}
       />
     </>
@@ -165,39 +147,61 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  content: { padding: 20, paddingBottom: 40, gap: 16 },
-  demoBanner: { backgroundColor: '#FFF3E0', borderRadius: 10, paddingVertical: 8, paddingHorizontal: 14, alignItems: 'center' },
-  demoBannerText: { fontSize: 13, fontWeight: '600', color: '#E65100' },
-  partnerCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: Colors.primaryLight, borderRadius: 16, padding: 16, gap: 12 },
-  partnerEmoji: { fontSize: 36 },
-  partnerLabel: { fontSize: 12, color: Colors.textSecondary },
-  partnerName: { fontSize: 18, fontWeight: '700', color: Colors.text },
+  content: { padding: 20, paddingBottom: 40, gap: 14 },
+  demoBanner: { backgroundColor: Colors.primaryLight, borderRadius: 12, paddingVertical: 8, alignItems: 'center' },
+  demoBannerText: { fontSize: 13, fontWeight: '600', color: Colors.primary },
 
-  boardCard: {
-    backgroundColor: Colors.surface, borderRadius: 16, borderWidth: 1, borderColor: Colors.border,
-    flexDirection: 'row', alignItems: 'center', overflow: 'hidden',
+  // Partner
+  partnerCard: {
+    flexDirection: 'row', alignItems: 'center', gap: 16,
+    backgroundColor: Colors.surface, borderRadius: 20, padding: 18,
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.08, shadowRadius: 16, elevation: 3,
   },
-  boardCardDraft: { borderColor: Colors.warning, borderStyle: 'dashed' },
-  boardCardContent: { flex: 1, padding: 20, gap: 12 },
-  deleteBtn: { paddingHorizontal: 16, paddingVertical: 20, justifyContent: 'center' },
-  deleteBtnText: { fontSize: 20 },
+  partnerLeft: { flexDirection: 'row', alignItems: 'center' },
+  partnerAvatarMe: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center' },
+  partnerAvatarPartner: { width: 44, height: 44, borderRadius: 22, backgroundColor: Colors.secondary, alignItems: 'center', justifyContent: 'center', marginLeft: -12 },
+  partnerHeart: { zIndex: 1, marginHorizontal: -6 },
+  avatarText: { fontSize: 18, fontWeight: '800', color: '#fff' },
+  partnerRight: { flex: 1, gap: 2 },
+  partnerNames: { fontSize: 17, fontWeight: '800', color: Colors.text },
+  partnerLabel: { fontSize: 13, color: Colors.textSecondary },
 
-  draftBadge: { backgroundColor: Colors.secondaryLight, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 8, alignSelf: 'flex-start' },
-  draftBadgeText: { fontSize: 12, fontWeight: '600', color: Colors.warning },
-  boardMeta: { fontSize: 14, color: Colors.textSecondary },
-  boardHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  boardTitle: { fontSize: 18, fontWeight: '700', color: Colors.text, flex: 1 },
-  daysLeft: { fontSize: 16, fontWeight: '700', color: Colors.textSecondary },
-  daysLeftUrgent: { color: Colors.error },
-  progressContainer: { gap: 6 },
-  progressBar: { height: 10, backgroundColor: Colors.border, borderRadius: 5, overflow: 'hidden' },
-  progressFill: { height: '100%', backgroundColor: Colors.primary, borderRadius: 5 },
-  progressText: { fontSize: 14, color: Colors.textSecondary, fontWeight: '600' },
-  rewardPreview: { fontSize: 13, color: Colors.textSecondary },
-  emptyState: { alignItems: 'center', paddingVertical: 40, gap: 8 },
-  emptyEmoji: { fontSize: 48, marginBottom: 8 },
-  emptyTitle: { fontSize: 18, fontWeight: '600', color: Colors.text },
-  emptySubtitle: { fontSize: 14, color: Colors.textSecondary },
-  createButton: { backgroundColor: Colors.primary, borderRadius: 16, paddingVertical: 18, alignItems: 'center' },
-  createButtonText: { color: '#fff', fontSize: 18, fontWeight: '700' },
+  // Board Card
+  boardCard: {
+    flexDirection: 'row', backgroundColor: Colors.surface, borderRadius: 18, overflow: 'hidden',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 10, elevation: 2,
+  },
+  boardColorBar: { width: 5 },
+  boardBody: { flex: 1, padding: 16, gap: 10 },
+  boardTop: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  boardTitleRow: { flexDirection: 'row', alignItems: 'center', gap: 8, flex: 1 },
+  boardEmoji: { fontSize: 22 },
+  boardTitle: { fontSize: 17, fontWeight: '700', color: Colors.text, flex: 1 },
+  deleteIcon: { fontSize: 16, color: Colors.textLight, padding: 4 },
+  progressRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  progressBarBg: { flex: 1, height: 8, backgroundColor: Colors.border, borderRadius: 4, overflow: 'hidden' },
+  progressBarFill: { height: '100%', borderRadius: 4 },
+  progressPercent: { fontSize: 14, fontWeight: '800', width: 40, textAlign: 'right' },
+  boardBottom: { flexDirection: 'row', justifyContent: 'space-between' },
+  boardCount: { fontSize: 13, color: Colors.textSecondary, fontWeight: '600' },
+  boardDday: { fontSize: 13, fontWeight: '700', color: Colors.textSecondary },
+  boardReward: { fontSize: 12, color: Colors.textLight },
+
+  // Draft
+  draftCard: { opacity: 0.8 },
+  draftBadge: { backgroundColor: Colors.goldLight, paddingHorizontal: 10, paddingVertical: 3, borderRadius: 8, alignSelf: 'flex-start' },
+  draftBadgeText: { fontSize: 11, fontWeight: '700', color: '#D4A017' },
+
+  // Empty
+  emptyState: { alignItems: 'center', paddingVertical: 48, gap: 8 },
+  emptyEmoji: { fontSize: 56, marginBottom: 8 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: Colors.text },
+  emptySubtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center' },
+
+  // Create
+  createBtn: {
+    backgroundColor: Colors.primary, borderRadius: 18, paddingVertical: 18, alignItems: 'center',
+    shadowColor: Colors.primary, shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 12, elevation: 4,
+  },
+  createBtnText: { color: '#fff', fontSize: 17, fontWeight: '800' },
 });
