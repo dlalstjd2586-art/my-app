@@ -1,14 +1,10 @@
 import { useState } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
-import { makeRedirectUri } from 'expo-auth-session';
-import * as WebBrowser from 'expo-web-browser';
 import { Colors } from '@/constants/Colors';
 import { supabase } from '@/lib/supabase';
 import { useDemoStore } from '@/stores/demoStore';
 import ConfirmModal from '@/components/ConfirmModal';
-
-WebBrowser.maybeCompleteAuthSession();
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -20,39 +16,15 @@ export default function LoginScreen() {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
-      const redirectUrl = makeRedirectUri({ path: 'auth/callback' });
-
       const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: redirectUrl,
-          skipBrowserRedirect: true,
+          redirectTo: window?.location?.origin ? `${window.location.origin}/login` : 'praisesticker://login',
         },
       });
 
       if (error) throw error;
-
-      if (data?.url) {
-        const result = await WebBrowser.openAuthSessionAsync(data.url, redirectUrl);
-
-        if (result.type === 'success' && result.url) {
-          // URL에서 토큰 추출
-          const url = new URL(result.url);
-          const hashParams = new URLSearchParams(url.hash.substring(1));
-          const queryParams = new URLSearchParams(url.search);
-
-          const accessToken = hashParams.get('access_token') || queryParams.get('access_token');
-          const refreshToken = hashParams.get('refresh_token') || queryParams.get('refresh_token');
-
-          if (accessToken && refreshToken) {
-            await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken,
-            });
-            // auth state change listener가 자동으로 라우팅 처리
-          }
-        }
-      }
+      // 웹: 자동으로 Google 로그인 페이지로 이동됨
     } catch (err: any) {
       const msg = err?.message || '로그인 중 문제가 발생했어요';
       if (msg.includes('placeholder') || msg.includes('supabaseUrl')) {
