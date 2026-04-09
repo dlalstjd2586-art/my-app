@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
+import { Platform } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useAuthStore } from '@/stores/authStore';
 import { useRelationshipStore } from '@/stores/relationshipStore';
 import { useBoardStore } from '@/stores/boardStore';
 import { useDemoStore } from '@/stores/demoStore';
+import { supabase } from '@/lib/supabase';
 import { StatusBar } from 'expo-status-bar';
 
 SplashScreen.preventAutoHideAsync();
@@ -17,6 +19,25 @@ export default function RootLayout() {
   const { checkExpiredBoards } = useBoardStore();
   const { isDemoMode } = useDemoStore();
   const [initialized, setInitialized] = useState(false);
+
+  // 웹: Google 로그인 후 URL 해시에서 토큰 복원
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const hash = window.location.hash;
+      if (hash && hash.includes('access_token')) {
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get('access_token');
+        const refreshToken = params.get('refresh_token');
+        if (accessToken && refreshToken) {
+          supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
+            .then(() => {
+              // URL에서 해시 제거
+              window.history.replaceState(null, '', window.location.pathname);
+            });
+        }
+      }
+    }
+  }, []);
 
   useEffect(() => {
     if (isDemoMode) {
@@ -35,6 +56,29 @@ export default function RootLayout() {
       checkExpiredBoards();
     }
   }, [isDemoMode, session, isProfileComplete]);
+
+  // Navigation guard
+  useEffect(() => {
+    if (!initialized) return;
+    if (isDemoMode) return;
+    if (isLoading) return;
+
+    const inLogin = segments[0] === 'login';
+    const inSetup = segments[0] === 'setup-nickname';
+    const inConnect = segments[0] === 'connect';
+
+    if (!session) {
+      if (!inLogin) router.replace('/login');
+    } else if (!isProfileComplete) {
+      if (!inSetup) router.replace('/setup-nickname');
+    } else if (!relationship) {
+      if (!inConnect && !inLogin) router.replace('/connect');
+    } else {
+      if (inLogin || inSetup || inConnect) {
+        router.replace('/(tabs)/home');
+      }
+    }
+  }, [initialized, isLoading, session, isProfileComplete, relationship, segments, isDemoMode]);
 
   useEffect(() => {
     if (initialized && !isLoading) {
