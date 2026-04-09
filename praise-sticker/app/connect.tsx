@@ -26,6 +26,8 @@ export default function ConnectScreen() {
   const [demoCode, setDemoCode] = useState('');
   const [showCopied, setShowCopied] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showError, setShowError] = useState(false);
+  const [errorMsg, setErrorMsg] = useState('');
 
   const { inviteCode, inviteExpiresAt, createInviteCode, acceptInviteCode } = useRelationshipStore();
   const { signOut } = useAuthStore();
@@ -79,18 +81,20 @@ export default function ConnectScreen() {
 
     const result = await acceptInviteCode(code);
     setIsSubmitting(false);
-    if (!result.success) {
-      // 웹에서도 동작하는 에러 표시
-      setShowSuccess(false);
+    if (result.success) {
+      setShowSuccess(true);
+    } else {
+      setErrorMsg(result.error ?? '연결에 실패했어요');
+      setShowError(true);
     }
   };
 
   const handleSuccessConfirm = () => {
     setShowSuccess(false);
     if (isDemoMode) {
-      enableDemo(); // 관계 연동 상태로 전환
-      router.replace('/(tabs)/home');
+      enableDemo();
     }
+    router.replace('/(tabs)/home');
   };
 
   return (
@@ -197,6 +201,17 @@ export default function ConnectScreen() {
         cancelText=""
         onConfirm={handleSuccessConfirm}
         onCancel={handleSuccessConfirm}
+      />
+
+      {/* 에러 모달 */}
+      <ConfirmModal
+        visible={showError}
+        title="연결 실패"
+        message={errorMsg}
+        confirmText="확인"
+        cancelText=""
+        onConfirm={() => setShowError(false)}
+        onCancel={() => setShowError(false)}
       />
     </SafeAreaView>
   );

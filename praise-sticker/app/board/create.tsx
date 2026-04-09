@@ -115,6 +115,7 @@ export default function CreateBoardScreen() {
       start_date: today.toISOString().split('T')[0],
       end_date: endDate.toISOString().split('T')[0],
       sticker_preset: selectedSticker === 'custom' ? 'star_gold' : selectedSticker,
+      sticker_image_url: customStickerUri,
       reward_description: rewardDescription.trim(),
       reward_type: 'promise',
       has_penalty: hasPenalty,
