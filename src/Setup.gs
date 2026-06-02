@@ -91,6 +91,70 @@ function debugDumpTestOrder() {
   return debugDumpOrder('20260602-0000862');
 }
 
+/**
+ * 테스트 주문에서 동기화에 필요한 핵심 정보만 골라 출력.
+ * - 회원/결제일/상품번호 같은 키 필드
+ * - "정기배송 N회차" 또는 회차/구독 관련 표식이 들어있는 모든 칸(경로 포함)
+ * 출력이 짧아 복사·확인이 쉽다.
+ */
+function debugAnalyzeTestOrder() {
+  return debugAnalyzeOrder('20260602-0000862');
+}
+
+function debugAnalyzeOrder(orderId) {
+  var data = cafe24Get_('/api/v2/admin/orders/' + encodeURIComponent(orderId), {
+    embed: 'items'
+  });
+  var order = (data && data.order) || data;
+
+  var lines = [];
+  lines.push('=== 핵심 필드 ===');
+  ['order_id', 'member_id', 'buyer_id', 'payment_date', 'order_date',
+   'order_place_name', 'order_place_id', 'market_id'].forEach(function (k) {
+    if (order && order[k] !== undefined) lines.push(k + ' = ' + JSON.stringify(order[k]));
+  });
+
+  var items = (order && order.items) || [];
+  lines.push('\n=== items (' + items.length + '건) ===');
+  items.forEach(function (it, i) {
+    lines.push('[' + i + '] product_no=' + JSON.stringify(it.product_no) +
+      ', product_name=' + JSON.stringify(it.product_name));
+  });
+
+  lines.push('\n=== 정기배송/회차 표식 후보 (경로: 값) ===');
+  var hits = [];
+  scanForSubscription_(order, '', hits);
+  if (hits.length === 0) {
+    lines.push('(이 주문 응답 안에서는 "정기배송/회차/subscription" 문자열을 못 찾음)');
+  } else {
+    hits.forEach(function (h) { lines.push(h); });
+  }
+
+  console.log(lines.join('\n'));
+  return hits;
+}
+
+/** 객체를 재귀 순회하며 정기배송/회차/구독 관련 값을 경로와 함께 수집. */
+function scanForSubscription_(node, path, hits) {
+  if (node === null || node === undefined) return;
+  if (typeof node === 'object') {
+    var isArr = Object.prototype.toString.call(node) === '[object Array]';
+    Object.keys(node).forEach(function (k) {
+      var childPath = path + (isArr ? '[' + k + ']' : (path ? '.' : '') + k);
+      // 키 이름 자체가 단서면 값 출력
+      if (/subscript|recur|정기|회차|cycle/i.test(k)) {
+        hits.push(childPath + ' = ' + JSON.stringify(node[k]));
+      }
+      scanForSubscription_(node[k], childPath, hits);
+    });
+  } else {
+    var s = String(node);
+    if (/정기배송|회차|subscription|정기결제|recurring/i.test(s)) {
+      hits.push(path + ' = ' + JSON.stringify(node));
+    }
+  }
+}
+
 /** 토큰 1개 생성(스킨 주입값 확인용). */
 function debugMakeToken(memberId) {
   var t = makeLookupToken_(memberId);
