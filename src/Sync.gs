@@ -101,51 +101,41 @@ function syncSubscriptions_() {
 /* ─────────────────────────────────────────────────────────────────────────
  * 주문 파싱 헬퍼.
  *
- * ⚠️ 아래 함수들은 카페24 정기배송 주문의 실제 JSON 구조에 맞춰 확정해야 한다.
- *    테스트 주문 20260602-0000862 를 debugDumpOrder('20260602-0000862') 로 덤프해
- *    "정기배송 N회차" 태그가 어느 필드에 들어오는지 확인 후 셀렉터를 고정할 것.
+ * 카페24 실제 응답(테스트 주문 20260602-0000862) 기준으로 확정:
+ *   - 정기결제 표식: 주문/상품 모두 subscription === "T" ("정기배송 N회차" 텍스트는 없음)
+ *   - 상품번호: items[].product_no (예: 1736 "정기결제 테스트")
+ *   - 회원: member_id (소셜로그인 시 "...@n" 형태도 그대로 키로 사용)
+ *   - 결제일: payment_date (ISO8601, 예 "2026-06-02T16:05:57+09:00")
  * ───────────────────────────────────────────────────────────────────────── */
 
-/** 강의구독 정기배송 주문인지 판정. */
+/** 강의구독 정기결제 주문인지 판정. */
 function isSubscriptionOrder_(order) {
-  var productNo = cfg_('SUBSCRIPTION_PRODUCT_NO', true);
+  var productNo = String(cfg_('SUBSCRIPTION_PRODUCT_NO', true));
   var items = (order && order.items) || [];
 
-  var hasProduct = items.some(function (it) {
-    return String(it.product_no) === String(productNo);
+  // 강의구독 상품 항목이 정기결제(subscription="T")로 담긴 주문.
+  var hasSubscribedItem = items.some(function (it) {
+    return String(it.product_no) === productNo && isTrueFlag_(it.subscription);
   });
-  if (!hasProduct) return false;
+  if (hasSubscribedItem) return true;
 
-  // 정기배송 회차 표식 확인. 카페24 응답 구조 확정 후 정밀화.
-  // 후보: order.subscription, order.market_id, item.additional_option, 주문 메모/태그 등.
-  return hasSubscriptionMarker_(order);
+  // 일부(목록) 응답은 항목 레벨 표식이 없을 수 있어 주문 레벨로 보강.
+  var hasProduct = items.some(function (it) {
+    return String(it.product_no) === productNo;
+  });
+  return hasProduct && isTrueFlag_(order && order.subscription);
+}
+
+/** 카페24 'T'/'F' 플래그 → boolean. */
+function isTrueFlag_(v) {
+  return String(v).toUpperCase() === 'T';
 }
 
 /**
- * 정기배송/회차 표식 존재 여부.
- * TODO(핸드오프): 테스트 주문 덤프로 실제 필드 확인 후 정밀화.
- * 현재는 보수적으로 "회차 정보를 추출할 수 있으면 정기배송"으로 간주.
+ * 회차 번호. 카페24 주문 상세에는 회차 숫자 필드가 없어 보통 '' 이다.
+ * (정기결제 여부는 subscription="T" 로 판단하며, 회차 숫자는 코어 로직에 불필요.)
  */
-function hasSubscriptionMarker_(order) {
-  return extractCycle_(order) !== '';
-}
-
-/** "정기배송 N회차"에서 N(회차) 추출. 없으면 ''. */
 function extractCycle_(order) {
-  // 흔히 주문/배송 메모 또는 별도 구독 필드에 "정기배송 N회차" 문자열이 들어온다.
-  var candidates = [
-    order && order.additional_order_info,
-    order && order.order_memo,
-    order && order.subscription && order.subscription.cycle,
-    order && order.market_order_no
-  ];
-  for (var i = 0; i < candidates.length; i++) {
-    var v = candidates[i];
-    if (v === undefined || v === null) continue;
-    if (typeof v === 'number') return String(v);
-    var m = String(v).match(/정기배송\s*(\d+)\s*회차/);
-    if (m) return m[1];
-  }
   return '';
 }
 
