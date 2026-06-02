@@ -61,11 +61,20 @@ function syncSubscriptions_() {
     var finalExpiry = (prevExpiry && prevExpiry.getTime() >= newExpiry.getTime())
       ? prevExpiry : newExpiry;
 
+    // 회차(last_cycle): 카페24 주문에는 회차 숫자가 없으므로 직접 카운트한다.
+    // 같은 주문(주문번호 동일)을 다시 읽으면 증가하지 않고, "새 주문"일 때만 +1.
+    var thisOrderId = extractOrderId_(order);
+    var prevCycle = existing ? (parseInt(existing.record.last_cycle, 10) || 0) : 0;
+    var prevOrderId = existing ? String(existing.record.last_order_id || '') : '';
+    var cycle = (thisOrderId && thisOrderId !== prevOrderId)
+      ? prevCycle + 1
+      : (prevCycle || 1);
+
     upsertLedgerRecord_(ledger, {
       member_id: memberId,
-      last_order_id: extractOrderId_(order),
+      last_order_id: thisOrderId,
       last_payment_date: toIsoDate_(payDate),
-      last_cycle: extractCycle_(order),
+      last_cycle: cycle,
       expiry_date: toIsoDate_(finalExpiry),
       switch: '', // 2)에서 일괄 평가
       updated_at: new Date().toISOString()
@@ -132,8 +141,9 @@ function isTrueFlag_(v) {
 }
 
 /**
- * 회차 번호. 카페24 주문 상세에는 회차 숫자 필드가 없어 보통 '' 이다.
- * (정기결제 여부는 subscription="T" 로 판단하며, 회차 숫자는 코어 로직에 불필요.)
+ * (참고용) 카페24 주문 상세 응답에는 회차 숫자 필드가 존재하지 않는다.
+ * 실제 회차(last_cycle)는 syncSubscriptions_ 에서 "새 주문이 들어올 때마다 +1"
+ * 방식으로 직접 카운트한다. 절대 회차가 필요하면 카페24 정기결제 전용 API 연동 필요.
  */
 function extractCycle_(order) {
   return '';
