@@ -40,11 +40,23 @@ function setupCreateSpreadsheet() {
   return ss.getUrl();
 }
 
-/** 시트(장부/로그) 탭 + 헤더 준비. */
+/** 시트(장부/로그) 탭 + 헤더 준비. 이미 있으면 1행 제목을 최신(한글)으로 덮어쓴다. */
 function setupSheets() {
-  ledgerSheet_();
-  logSheet_();
+  refreshHeaders_(ledgerSheet_(), LEDGER_HEADERS);
+  refreshHeaders_(logSheet_(), LOG_HEADERS);
   console.log('시트 준비 완료: ' + SHEET_NAMES.LEDGER + ', ' + SHEET_NAMES.LOG);
+}
+
+/** 1행 제목을 현재 헤더로 덮어쓰기(데이터 행은 그대로 유지). */
+function refreshHeaders_(sheet, headers) {
+  sheet.getRange(1, 1, 1, headers.length).setValues([headers]);
+  sheet.setFrozenRows(1);
+}
+
+/** 기존 시트 제목을 한글로 바꾸고 싶을 때 한 번 실행. */
+function relabelSheetsKorean() {
+  setupSheets();
+  console.log('시트 제목을 한글로 갱신했습니다.');
 }
 
 /**

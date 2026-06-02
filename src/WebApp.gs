@@ -36,13 +36,13 @@ function doGet(e) {
     payload = { ok: false, error: '토큰 검증 실패' };
   } else {
     var rec = getLedgerRecord_(memberId);
-    var active = !!(rec && rec.switch === 'ON');
+    var active = !!(rec && rec.switch === SWITCH_ON);
     payload = {
       ok: true,
       member_id: memberId,
       active: active,                       // 강의실은 이 값으로 노출/차단 결정
       expiry_date: rec ? rec.expiry_date : null,
-      switch: rec ? rec.switch : 'OFF',
+      switch: rec ? rec.switch : SWITCH_OFF,
       checked_at: new Date().toISOString()
     };
   }

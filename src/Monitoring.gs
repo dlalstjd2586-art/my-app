@@ -44,7 +44,7 @@ function watchdogCheckTodayRun() {
     for (var i = 0; i < rows.length; i++) {
       var ts = String(rows[i][0]);
       var status = String(rows[i][1]);
-      if (ts.indexOf(today) === 0 && status === 'OK') {
+      if (ts.indexOf(today) === 0 && status === LOG_STATUS_OK) {
         ranToday = true;
         break;
       }

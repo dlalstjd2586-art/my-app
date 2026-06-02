@@ -58,18 +58,26 @@ var SHEET_NAMES = {
   LOG: '실행로그'        // 매일 실행 결과 로그
 };
 
-/** 구독장부 시트 헤더(열 순서가 곧 스키마). */
+/** 구독장부 시트 헤더(열 순서가 곧 스키마). 표시는 한글, 코드는 열 위치로 동작. */
 var LEDGER_HEADERS = [
-  'member_id',          // A: 카페24 회원 아이디
-  'last_order_id',      // B: 마지막으로 반영한 정기배송 주문번호
-  'last_payment_date',  // C: 마지막 결제일 (ISO yyyy-MM-dd)
-  'last_cycle',         // D: 마지막 회차 번호
-  'expiry_date',        // E: 구독 만료일 (ISO yyyy-MM-dd)
-  'switch',             // F: 'ON' | 'OFF'
-  'updated_at'          // G: 장부 갱신 시각(ISO)
+  '회원ID',        // A: 카페24 회원 아이디
+  '최근주문번호',   // B: 마지막으로 반영한 정기결제 주문번호
+  '최근결제일',     // C: 마지막 결제일 (yyyy-MM-dd)
+  '회차',          // D: 회차(추적 시작 이후 카운트)
+  '만료일',        // E: 구독 만료일 (yyyy-MM-dd)
+  '구독상태',       // F: 시청가능 | 차단
+  '갱신시각'        // G: 장부 갱신 시각
 ];
 
-var LOG_HEADERS = ['timestamp', 'status', 'processed_count', 'message'];
+var LOG_HEADERS = ['시각', '상태', '처리인원', '메시지'];
+
+/** 구독상태(스위치) 표시값. */
+var SWITCH_ON = '시청가능';
+var SWITCH_OFF = '차단';
+
+/** 실행로그 상태 표시값. */
+var LOG_STATUS_OK = '정상';
+var LOG_STATUS_ERROR = '오류';
 
 /** 속성 저장소 핸들. */
 function props_() {

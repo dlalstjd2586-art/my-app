@@ -22,9 +22,9 @@ function dailySync() {
   var startedAt = new Date();
   try {
     var processed = syncSubscriptions_();
-    recordRun_('OK', processed, '정상 동작, 처리 ' + processed + '명');
+    recordRun_(LOG_STATUS_OK, processed, '정상 동작, 처리 ' + processed + '명');
   } catch (err) {
-    recordRun_('ERROR', 0, String(err && err.stack || err));
+    recordRun_(LOG_STATUS_ERROR, 0, String(err && err.stack || err));
     notifyAdmin_('[구독동기화 실패] ' + new Date().toISOString(),
       '오류: ' + (err && err.stack || err));
     throw err; // 실행 로그(Stackdriver)에도 남도록 재throw
@@ -95,7 +95,7 @@ function syncSubscriptions_() {
       var cutoff = new Date(expiry.getTime() + grace * 24 * 60 * 60 * 1000);
       on = today.getTime() <= startOfDay_(cutoff).getTime();
     }
-    var newSwitch = on ? 'ON' : 'OFF';
+    var newSwitch = on ? SWITCH_ON : SWITCH_OFF;
     if (rec.switch !== newSwitch) {
       rec.switch = newSwitch;
       rec.updated_at = new Date().toISOString();
