@@ -12,7 +12,7 @@
  */
 
 /** API 버전 헤더. 카페24 변경 시 이 값만 갱신. */
-var CAFE24_API_VERSION = '2024-06-01';
+var CAFE24_API_VERSION = '2026-03-01';
 
 /**
  * 유효한 access token 반환(필요 시 갱신).
