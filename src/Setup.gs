@@ -82,6 +82,15 @@ function debugDumpOrder(orderId) {
   return data;
 }
 
+/**
+ * 클릭 한 번으로 실행하는 테스트 주문 덤프(드롭다운에서 골라 실행).
+ * 명세서 참고 테스트 주문 20260602-0000862 의 회차 태그 구조 확인용.
+ * 다른 주문을 보고 싶으면 아래 문자열만 바꾼다.
+ */
+function debugDumpTestOrder() {
+  return debugDumpOrder('20260602-0000862');
+}
+
 /** 토큰 1개 생성(스킨 주입값 확인용). */
 function debugMakeToken(memberId) {
   var t = makeLookupToken_(memberId);
