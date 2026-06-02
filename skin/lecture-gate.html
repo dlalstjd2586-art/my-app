@@ -1,0 +1,121 @@
+<!--
+ ════════════════════════════════════════════════════════════════════════════
+  강의실 구독 게이팅 스니펫  (카페24 스킨 HTML 에 붙여넣기)
+  방식: 비메오 도메인제한 + 구독상태 엔드포인트
+
+  동작:
+   1) 로그인한 회원의 아이디를 읽는다.
+   2) GAS 엔드포인트에 "이 회원 구독중?" 을 물어본다(JSONP).
+   3) 구독중(active)이면 비메오 영상을 노출, 아니면 구독 안내를 보여준다.
+
+  ── 설정(딱 3곳만 고치면 됩니다) ──────────────────────────────────────────
+   [1] ENDPOINT_URL : 우리 웹앱 주소(.../exec)
+   [2] VIMEO_ID     : 이 페이지에서 보여줄 비메오 영상 번호
+   [3] SUBSCRIBE_URL: 구독(강의구독 상품) 구매 페이지 주소
+   그리고 getMemberId() 안의 회원아이디 출력 부분을 카페24 변수로 확인.
+ ════════════════════════════════════════════════════════════════════════════
+-->
+
+<div id="lecture-gate" style="max-width:900px;margin:0 auto;">
+  <div id="lg-loading" style="padding:40px;text-align:center;color:#888;">
+    구독 상태를 확인하는 중입니다…
+  </div>
+  <div id="lg-video" style="display:none;">
+    <!-- 비메오 영상이 여기에 들어갑니다(구독중일 때만) -->
+  </div>
+  <div id="lg-locked" style="display:none;padding:48px 24px;text-align:center;
+       border:1px solid #eee;border-radius:12px;background:#fafafa;">
+    <div style="font-size:40px;margin-bottom:12px;">🔒</div>
+    <h3 style="margin:0 0 8px;">구독 회원 전용 강의입니다</h3>
+    <p id="lg-locked-msg" style="color:#666;margin:0 0 20px;">
+      강의를 시청하려면 강의구독이 필요합니다.
+    </p>
+    <a id="lg-subscribe-btn" href="#"
+       style="display:inline-block;padding:12px 24px;background:#222;color:#fff;
+              border-radius:8px;text-decoration:none;font-weight:600;">
+      구독하고 시청하기
+    </a>
+  </div>
+</div>
+
+<script>
+(function () {
+  // ── [1] 우리 웹앱 주소(.../exec) ─────────────────────────────────────────
+  var ENDPOINT_URL = "https://script.google.com/macros/s/AKfycbxv6kICsvN3HXS5nxNK2PIwmKSQu1Gzh9toM_FsxJ1UHcOCgBVF2akTzcHUObHAQLhARg/exec";
+
+  // ── [2] 이 페이지의 비메오 영상 번호(예: vimeo.com/123456789 의 123456789) ─
+  var VIMEO_ID = "VIMEO_VIDEO_ID";
+
+  // ── [3] 구독(강의구독 상품) 구매 페이지 주소 ─────────────────────────────
+  var SUBSCRIBE_URL = "/";
+
+  // ── 로그인 회원 아이디 읽기 ──────────────────────────────────────────────
+  //  카페24 스킨은 로그인 회원의 아이디를 치환 변수로 제공합니다.
+  //  아래 따옴표 안의 값이 실제 아이디로 바뀌는지 확인하세요(확인 방법은 README 참고).
+  //  테스트할 땐 window.MEMBER_ID = "47744807@n"; 처럼 직접 넣어 시험할 수 있습니다.
+  function getMemberId() {
+    var injected = "{$member_id}"; // ← 카페24 회원아이디 치환 변수(확인 필요)
+    if (injected && injected.indexOf("{$") === -1 && injected !== "") return injected;
+    if (window.MEMBER_ID) return String(window.MEMBER_ID);
+    return "";
+  }
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function show(elId) { $(elId).style.display = "block"; }
+  function hide(elId) { $(elId).style.display = "none"; }
+
+  function showVideo() {
+    var html =
+      '<div style="position:relative;padding-top:56.25%;">' +
+      '<iframe src="https://player.vimeo.com/video/' + encodeURIComponent(VIMEO_ID) + '"' +
+      ' style="position:absolute;top:0;left:0;width:100%;height:100%;border:0;"' +
+      ' allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>' +
+      '</div>';
+    $("lg-video").innerHTML = html;
+    hide("lg-loading"); hide("lg-locked"); show("lg-video");
+  }
+
+  function showLocked(message) {
+    if (message) $("lg-locked-msg").textContent = message;
+    $("lg-subscribe-btn").setAttribute("href", SUBSCRIBE_URL);
+    hide("lg-loading"); hide("lg-video"); show("lg-locked");
+  }
+
+  // ── 엔드포인트 호출(JSONP: 크로스도메인 안전) ────────────────────────────
+  function checkSubscription(memberId) {
+    var cbName = "lgCb_" + Math.floor(Math.random() * 1e9);
+    window[cbName] = function (res) {
+      try {
+        if (res && res.ok && res.active) showVideo();
+        else showLocked();
+      } catch (e) { showLocked(); }
+      delete window[cbName];
+      if (s.parentNode) s.parentNode.removeChild(s);
+    };
+    var url = ENDPOINT_URL +
+      "?member_id=" + encodeURIComponent(memberId) +
+      "&callback=" + cbName;
+    var s = document.createElement("script");
+    s.src = url;
+    s.onerror = function () { showLocked("일시적으로 확인에 실패했습니다. 새로고침 해주세요."); };
+    document.body.appendChild(s);
+  }
+
+  // ── 시작 ────────────────────────────────────────────────────────────────
+  function start() {
+    var memberId = getMemberId();
+    if (!memberId) {
+      showLocked("로그인 후 이용해 주세요.");
+      return;
+    }
+    checkSubscription(memberId);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else {
+    start();
+  }
+})();
+</script>
