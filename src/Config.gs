@@ -38,7 +38,14 @@ var CONFIG_KEYS = {
   GRACE_DAYS: '0',
 
   LOOKUP_TOKEN_SECRET: '',
-  ADMIN_EMAIL: ''
+  ADMIN_EMAIL: '',
+
+  // OAuth(최초 토큰 발급)용. 자세한 절차는 OAuth.gs 참고.
+  // CAFE24_REDIRECT_URI: 이 스크립트를 웹 앱으로 배포한 /exec URL.
+  //   카페24 개발자센터 앱의 Redirect URI 에도 똑같이 등록해야 한다.
+  CAFE24_REDIRECT_URI: '',
+  // 발급받을 권한 범위(쉼표 구분). 앱에 허용된 범위의 부분집합이어야 한다.
+  CAFE24_SCOPES: 'mall.read_order,mall.read_customer,mall.write_customer'
 };
 
 /** 시트 이름(같은 스프레드시트 안의 탭). */

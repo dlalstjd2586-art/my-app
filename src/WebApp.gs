@@ -19,6 +19,12 @@
 
 function doGet(e) {
   var params = (e && e.parameter) || {};
+
+  // 카페24 OAuth 콜백(인가코드 수신) 처리 → 토큰 저장. (OAuth.gs)
+  if (params.code) {
+    return handleOAuthCallback_(params);
+  }
+
   var memberId = (params.member_id || '').trim();
   var token = (params.token || '').trim();
   var callback = (params.callback || '').trim();
