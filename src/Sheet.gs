@@ -9,11 +9,16 @@
 
 /** 활성 스프레드시트 핸들. 없으면 명확한 안내 예외. */
 function spreadsheet_() {
-  var ss = SpreadsheetApp.getActive();
-  if (!ss) {
-    throw new Error('연결된 스프레드시트가 없습니다. Setup.gs 의 setup() 을 먼저 실행하세요.');
+  // 1) 속성에 장부 스프레드시트 ID가 지정돼 있으면 그것을 연다(독립형 스크립트용).
+  var id = cfg_('LEDGER_SHEET_ID');
+  if (id) {
+    return SpreadsheetApp.openById(id);
   }
-  return ss;
+  // 2) 시트에 바운드된 스크립트면 활성 스프레드시트 사용.
+  var ss = SpreadsheetApp.getActive();
+  if (ss) return ss;
+
+  throw new Error('장부 스프레드시트가 없습니다. Setup.gs 의 setupCreateSpreadsheet() 를 1회 실행하세요.');
 }
 
 /** 시트 가져오기(없으면 생성 + 헤더 기록). */

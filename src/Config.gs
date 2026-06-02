@@ -40,6 +40,10 @@ var CONFIG_KEYS = {
   LOOKUP_TOKEN_SECRET: '',
   ADMIN_EMAIL: '',
 
+  // 구독 장부를 저장할 구글시트 ID. 독립형 스크립트는 setupCreateSpreadsheet() 가
+  // 새 시트를 만들어 이 값을 자동으로 채운다. (시트 바운드 스크립트면 비워둬도 됨)
+  LEDGER_SHEET_ID: '',
+
   // OAuth(최초 토큰 발급)용. 자세한 절차는 OAuth.gs 참고.
   // CAFE24_REDIRECT_URI: 이 스크립트를 웹 앱으로 배포한 /exec URL.
   //   카페24 개발자센터 앱의 Redirect URI 에도 똑같이 등록해야 한다.

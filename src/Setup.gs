@@ -22,10 +22,25 @@ function initProperties() {
 }
 
 /**
- * 2) 시트(장부/로그) 생성 + 헤더.
- *    독립형 스크립트라면 먼저 시트를 만들고 이 스크립트를 컨테이너 바운드로 연결하거나,
- *    이 함수를 컨테이너 바운드 환경에서 실행한다.
+ * 2) 장부용 구글시트를 새로 만들고 그 ID를 속성(LEDGER_SHEET_ID)에 저장.
+ *    독립형 스크립트에서 1회만 실행하면 된다(이미 있으면 그대로 사용).
  */
+function setupCreateSpreadsheet() {
+  var existing = cfg_('LEDGER_SHEET_ID');
+  if (existing) {
+    var ssOld = SpreadsheetApp.openById(existing);
+    console.log('이미 장부 시트가 있습니다:\n' + ssOld.getUrl());
+    setupSheets();
+    return ssOld.getUrl();
+  }
+  var ss = SpreadsheetApp.create('운동강의 구독장부');
+  props_().setProperty('LEDGER_SHEET_ID', ss.getId());
+  setupSheets();
+  console.log('새 장부 시트를 만들었습니다. 아래 주소에서 확인하세요:\n' + ss.getUrl());
+  return ss.getUrl();
+}
+
+/** 시트(장부/로그) 탭 + 헤더 준비. */
 function setupSheets() {
   ledgerSheet_();
   logSheet_();
@@ -59,10 +74,10 @@ function removeTriggersFor_(handlerNames) {
   });
 }
 
-/** 한 번에: 속성 초기화 → 시트 → 트리거. */
+/** 한 번에: 속성 초기화 → 장부 시트 생성 → 트리거. */
 function setup() {
   initProperties();
-  setupSheets();
+  setupCreateSpreadsheet();
   installTriggers();
 }
 
