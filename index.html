@@ -240,41 +240,52 @@
       sidebar.appendChild(box);
     }
 
-    // data.json 불러오기
+    // 파일 안에 들어있는 기본 장소 데이터.
+    // (이게 있어서 서버 없이 index.html을 더블클릭만 해도 지도가 떠요.)
+    const SAMPLE_PLACES = [
+      { name: "어니언 안국", category: "카페", lat: 37.576394, lng: 126.985565, memo: "한옥을 개조한 감성 베이커리 카페. 팡도르가 시그니처." },
+      { name: "광장시장", category: "맛집", lat: 37.570028, lng: 126.999512, memo: "마약김밥, 빈대떡, 육회 등 전통 먹거리 천국." },
+      { name: "성수동 카페거리", category: "카페", lat: 37.544577, lng: 127.055966, memo: "공장을 개조한 개성있는 카페들이 모여 있는 핫플." },
+      { name: "서울숲", category: "산책", lat: 37.544479, lng: 127.037744, memo: "사슴도 보고 호수도 있는 도심 속 넓은 공원. 산책 데이트 추천." },
+      { name: "국립현대미술관 서울관", category: "전시", lat: 37.578945, lng: 126.980064, memo: "현대미술 전시. 경복궁과 가까워 함께 둘러보기 좋음." },
+      { name: "남산공원 N서울타워", category: "산책", lat: 37.551169, lng: 126.988227, memo: "야경 명소. 케이블카 타고 올라가 사랑의 자물쇠 구경." }
+    ];
+
+    // 받아온 장소 목록으로 지도에 마커를 그리는 함수
+    function loadPlaces(places) {
+      if (!Array.isArray(places) || places.length === 0) {
+        showError("표시할 장소가 없습니다.");
+        return;
+      }
+
+      const bounds = [];
+      places.forEach((place) => {
+        if (typeof place.lat !== "number" || typeof place.lng !== "number") return;
+        const marker = L.marker([place.lat, place.lng], { icon: makeIcon(place.category) });
+        marker.bindPopup(popupHtml(place));
+        markers.push({ marker, category: place.category });
+        bounds.push([place.lat, place.lng]);
+      });
+
+      buildSidebar(places);
+      renderMarkers();
+
+      if (bounds.length > 0) {
+        map.fitBounds(bounds, { padding: [60, 60] });
+      }
+    }
+
+    // data.json을 먼저 시도하고, 안 되면(파일을 그냥 더블클릭해서 연 경우 등)
+    // 위에 넣어둔 기본 데이터로 자동으로 지도를 띄운다.
     fetch("data.json")
       .then((res) => {
         if (!res.ok) throw new Error("HTTP " + res.status);
         return res.json();
       })
-      .then((places) => {
-        if (!Array.isArray(places) || places.length === 0) {
-          showError("data.json에 장소가 없습니다.");
-          return;
-        }
-
-        const bounds = [];
-        places.forEach((place) => {
-          if (typeof place.lat !== "number" || typeof place.lng !== "number") return;
-          const marker = L.marker([place.lat, place.lng], { icon: makeIcon(place.category) });
-          marker.bindPopup(popupHtml(place));
-          markers.push({ marker, category: place.category });
-          bounds.push([place.lat, place.lng]);
-        });
-
-        buildSidebar(places);
-        renderMarkers();
-
-        if (bounds.length > 0) {
-          map.fitBounds(bounds, { padding: [60, 60] });
-        }
-      })
+      .then((places) => loadPlaces(places))
       .catch((err) => {
-        showError(
-          "<strong>data.json을 불러오지 못했습니다.</strong><br>" +
-          "브라우저에서 파일을 직접 열면(file://) 보안 정책 때문에 막힐 수 있어요. " +
-          "로컬 서버로 실행해 주세요.<br><br>오류: " + escapeHtml(err.message)
-        );
-        console.error(err);
+        console.warn("data.json을 못 불러와 기본 데이터로 표시합니다.", err);
+        loadPlaces(SAMPLE_PLACES);
       });
   </script>
 </body>
