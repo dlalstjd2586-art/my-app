@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>우리의 데이트 지도</title>
+
+  <!-- Leaflet CSS (CDN) -->
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; font-family: "Apple SD Gothic Neo", "Malgun Gothic", sans-serif; }
+
+    #app { display: flex; height: 100vh; }
+
+    /* 사이드바 */
+    #sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      background: #fff;
+      border-right: 1px solid #e5e5e5;
+      display: flex;
+      flex-direction: column;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 2px 0 8px rgba(0,0,0,0.04);
+    }
+    #sidebar h1 {
+      font-size: 18px;
+      padding: 20px 18px 6px;
+      color: #e63950;
+    }
+    #sidebar .subtitle {
+      font-size: 12px;
+      color: #888;
+      padding: 0 18px 16px;
+    }
+    .filter-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #999;
+      padding: 8px 18px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .filter-list { list-style: none; }
+    .filter-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 11px 18px;
+      cursor: pointer;
+      font-size: 15px;
+      color: #333;
+      border-left: 3px solid transparent;
+      transition: background 0.15s;
+    }
+    .filter-item:hover { background: #f7f7f7; }
+    .filter-item.active {
+      background: #fff0f2;
+      border-left-color: #e63950;
+      font-weight: 600;
+      color: #e63950;
+    }
+    .filter-item .dot {
+      width: 12px; height: 12px; border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .filter-item .count {
+      margin-left: auto;
+      font-size: 12px;
+      color: #aaa;
+      background: #f0f0f0;
+      border-radius: 10px;
+      padding: 1px 8px;
+    }
+    .filter-item.active .count { background: #ffd9df; color: #e63950; }
+
+    /* 지도 */
+    #map { flex: 1; height: 100%; }
+
+    /* 커스텀 마커 핀 */
+    .pin {
+      width: 22px; height: 22px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      border: 2px solid #fff;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+    }
+
+    /* 팝업 */
+    .popup-title { font-size: 16px; font-weight: 700; margin-bottom: 4px; }
+    .popup-cat {
+      display: inline-block;
+      font-size: 11px;
+      color: #fff;
+      padding: 2px 8px;
+      border-radius: 10px;
+      margin-bottom: 8px;
+    }
+    .popup-memo { font-size: 13px; color: #555; line-height: 1.5; }
+
+    .error-box {
+      padding: 16px 18px;
+      margin: 12px;
+      background: #fff3f3;
+      border: 1px solid #ffcaca;
+      border-radius: 8px;
+      font-size: 13px;
+      color: #c0392b;
+      line-height: 1.5;
+    }
+
+    /* 모바일 */
+    @media (max-width: 640px) {
+      #app { flex-direction: column; }
+      #sidebar { width: 100%; max-height: 38vh; }
+      #map { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <aside id="sidebar">
+      <h1>♥ 우리의 데이트 지도</h1>
+      <div class="subtitle">가보고 싶은 서울 데이트 장소</div>
+      <div class="filter-label">카테고리</div>
+      <ul class="filter-list" id="filter-list"></ul>
+    </aside>
+    <div id="map"></div>
+  </div>
+
+  <!-- Leaflet JS (CDN) -->
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
+
+  <script>
+    // 카테고리별 색상 (없으면 기본색 사용)
+    const CATEGORY_COLORS = {
+      "카페": "#8e6e53",
+      "맛집": "#e67e22",
+      "산책": "#27ae60",
+      "전시": "#8e44ad"
+    };
+    const DEFAULT_COLOR = "#3498db";
+    const colorFor = (cat) => CATEGORY_COLORS[cat] || DEFAULT_COLOR;
+
+    // 지도 초기화 (서울 시청 중심)
+    const map = L.map("map").setView([37.5665, 126.9780], 12);
+    L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19,
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // 마커 아이콘 생성
+    function makeIcon(category) {
+      return L.divIcon({
+        className: "",
+        html: `<div class="pin" style="background:${colorFor(category)}"></div>`,
+        iconSize: [22, 22],
+        iconAnchor: [11, 22],
+        popupAnchor: [0, -22]
+      });
+    }
+
+    // 팝업 HTML
+    function popupHtml(place) {
+      const memo = place.memo ? `<div class="popup-memo">${escapeHtml(place.memo)}</div>` : "";
+      return `
+        <div class="popup-title">${escapeHtml(place.name)}</div>
+        <span class="popup-cat" style="background:${colorFor(place.category)}">${escapeHtml(place.category)}</span>
+        ${memo}
+      `;
+    }
+
+    function escapeHtml(str) {
+      return String(str ?? "").replace(/[&<>"']/g, (c) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[c]));
+    }
+
+    let markers = []; // { marker, category }
+    let activeFilter = "전체";
+
+    function renderMarkers() {
+      markers.forEach(({ marker, category }) => {
+        const visible = activeFilter === "전체" || category === activeFilter;
+        if (visible) {
+          marker.addTo(map);
+        } else {
+          map.removeLayer(marker);
+        }
+      });
+    }
+
+    function buildSidebar(places) {
+      const counts = {};
+      places.forEach((p) => { counts[p.category] = (counts[p.category] || 0) + 1; });
+      const categories = Object.keys(counts).sort();
+
+      const list = document.getElementById("filter-list");
+      list.innerHTML = "";
+
+      // "전체" 항목
+      const items = [["전체", null, places.length]].concat(
+        categories.map((c) => [c, colorFor(c), counts[c]])
+      );
+
+      items.forEach(([name, color, count]) => {
+        const li = document.createElement("li");
+        li.className = "filter-item" + (name === activeFilter ? " active" : "");
+        const dot = color
+          ? `<span class="dot" style="background:${color}"></span>`
+          : `<span class="dot" style="background:linear-gradient(135deg,#e63950,#ff9a3c)"></span>`;
+        li.innerHTML = `${dot}<span>${escapeHtml(name)}</span><span class="count">${count}</span>`;
+        li.addEventListener("click", () => {
+          activeFilter = name;
+          document.querySelectorAll(".filter-item").forEach((el) => el.classList.remove("active"));
+          li.classList.add("active");
+          renderMarkers();
+        });
+        list.appendChild(li);
+      });
+    }
+
+    function showError(msg) {
+      const sidebar = document.getElementById("sidebar");
+      const box = document.createElement("div");
+      box.className = "error-box";
+      box.innerHTML = msg;
+      sidebar.appendChild(box);
+    }
+
+    // data.json 불러오기
+    fetch("data.json")
+      .then((res) => {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.json();
+      })
+      .then((places) => {
+        if (!Array.isArray(places) || places.length === 0) {
+          showError("data.json에 장소가 없습니다.");
+          return;
+        }
+
+        const bounds = [];
+        places.forEach((place) => {
+          if (typeof place.lat !== "number" || typeof place.lng !== "number") return;
+          const marker = L.marker([place.lat, place.lng], { icon: makeIcon(place.category) });
+          marker.bindPopup(popupHtml(place));
+          markers.push({ marker, category: place.category });
+          bounds.push([place.lat, place.lng]);
+        });
+
+        buildSidebar(places);
+        renderMarkers();
+
+        if (bounds.length > 0) {
+          map.fitBounds(bounds, { padding: [60, 60] });
+        }
+      })
+      .catch((err) => {
+        showError(
+          "<strong>data.json을 불러오지 못했습니다.</strong><br>" +
+          "브라우저에서 파일을 직접 열면(file://) 보안 정책 때문에 막힐 수 있어요. " +
+          "로컬 서버로 실행해 주세요.<br><br>오류: " + escapeHtml(err.message)
+        );
+        console.error(err);
+      });
+  </script>
+</body>
+</html>
