@@ -1,122 +1,75 @@
-// Renders the QUAT store homepage from real scraped data (data.json)
-const won = (n) => (n == null ? "" : Number(n).toLocaleString("ko-KR") + "원");
+// MOVE landing — original content, gradient placeholder thumbnails (no external assets)
 
-async function init() {
-  // Prefer the inlined global (works via file://); fall back to fetching data.json.
-  let data = window.STORE_DATA;
-  if (!data) {
-    try {
-      data = await (await fetch("data.json")).json();
-    } catch (e) {
-      document.getElementById("sections").innerHTML =
-        '<p style="padding:40px;text-align:center;color:#999">데이터를 불러올 수 없습니다.</p>';
-      return;
-    }
-  }
+const chips = ["발레", "필라테스", "요가", "스트레칭", "근력", "다이어트", "명상"];
 
-  renderBanners(data.banners);
-  renderCategories(data.categories);
-  renderSections(data.sections);
-  wireCart();
-}
+// Two green/navy gradient families so thumbnails feel on-brand
+const grad = (h, i) =>
+  `linear-gradient(150deg, hsl(${h} 55% ${38 + (i % 3) * 6}%), hsl(${h + 22} 60% ${24 + (i % 2) * 6}%))`;
 
-/* ---- Banner carousel ---- */
-function renderBanners(banners) {
-  const track = document.getElementById("heroTrack");
-  track.innerHTML = banners
-    .map(
-      (b) => `<a class="hero__slide" href="${b.link || "#"}" target="_blank" rel="noopener">
-        <img src="${b.img}" alt="${b.title}" loading="eager" />
-      </a>`
-    )
-    .join("");
+const popular = [
+  { name: "아침을 여는 모닝 스트레칭", min: 12, level: "초급", badge: "LIVE" },
+  { name: "코어 집중 필라테스", min: 20, level: "중급" },
+  { name: "전신 순환 근력 트레이닝", min: 25, level: "중급" },
+  { name: "딥 릴랙스 저녁 요가", min: 18, level: "초급" },
+  { name: "발레핏 베이직", min: 15, level: "초급", badge: "NEW" },
+  { name: "하체 집중 번 아웃", min: 22, level: "고급" },
+];
 
-  const slides = banners.length;
-  let idx = 0;
-  const countEl = document.getElementById("heroCount");
-  const go = (n) => {
-    idx = (n + slides) % slides;
-    track.style.transform = `translateX(-${idx * 100}%)`;
-    countEl.textContent = `${idx + 1} / ${slides}`;
-  };
-  document.getElementById("heroPrev").addEventListener("click", () => go(idx - 1));
-  document.getElementById("heroNext").addEventListener("click", () => go(idx + 1));
-  go(0);
-  if (slides > 1) setInterval(() => go(idx + 1), 5000);
-}
+const programs = [
+  { name: "4주 체형 교정 챌린지", min: 0, level: "프로그램", badge: "추천" },
+  { name: "초보자 홈트 스타터", min: 0, level: "프로그램" },
+  { name: "코어 &  자세 바로잡기", min: 0, level: "프로그램" },
+  { name: "릴랙스 &  수면 루틴", min: 0, level: "프로그램" },
+  { name: "주 3회 다이어트 플랜", min: 0, level: "프로그램" },
+];
 
-/* ---- Category icons ---- */
-function renderCategories(cats) {
-  document.getElementById("catList").innerHTML = cats
-    .map(
-      (c) => `<li><a href="#" class="cat">
-        <span class="cat__icon"><img src="${c.icon}" alt="" loading="lazy" /></span>
-        <span class="cat__name">${c.name}</span>
-      </a></li>`
-    )
-    .join("");
-}
-
-/* ---- Product sections ---- */
-function card(p) {
-  const hasDiscount = p.rate > 0 && p.retail && p.retail !== p.sale;
-  const priceLine = hasDiscount
-    ? `<span class="card__rate">${p.rate}%</span><span class="card__final">${won(p.sale)}</span>`
-    : `<span class="card__final">${won(p.sale)}</span>`;
-  const origin = hasDiscount ? won(p.retail) : "";
-  const rating = (4 + ((p.id % 9) + 1) / 10).toFixed(1);
+function cardHTML(item, i, hueBase) {
+  const badge = item.badge ? `<span class="cardx__badge">${item.badge}</span>` : "";
+  const meta = item.min > 0 ? `${item.min}분 · ${item.level}` : item.level;
   return `
-    <article class="card" data-price="${p.sale || 0}">
-      <div class="card__thumb">
-        <img src="${p.img}" alt="${p.name}" loading="lazy" />
-        <button class="card__like" aria-label="찜">♡</button>
+    <article class="cardx">
+      <div class="cardx__thumb" style="background:${grad(hueBase + i * 14, i)}">
+        ${badge}<span class="cardx__lv">${item.level}</span>
       </div>
-      <div class="card__body">
-        <p class="card__name">${p.name}</p>
-        <p class="card__origin">${origin}</p>
-        <p class="card__price">${priceLine}</p>
-        <p class="card__meta"><span class="card__star">★</span>${rating} · 무료배송</p>
-      </div>
+      <p class="cardx__name">${item.name}</p>
+      <p class="cardx__meta">${meta}</p>
     </article>`;
 }
 
-function renderSections(sections) {
-  document.getElementById("sections").innerHTML = sections
-    .map(
-      (s) => `<section class="section container">
-        <div class="section__head">
-          <a href="#" class="section__more">전체보기 ›</a>
-          <h3 class="section__title">${s.title}</h3>
-        </div>
-        <div class="grid">${s.items.map(card).join("")}</div>
-      </section>`
-    )
-    .join("");
+function render(id, list, hueBase) {
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = list.map((it, i) => cardHTML(it, i, hueBase)).join("");
 }
 
-/* ---- Cart + like interactions ---- */
-function wireCart() {
-  let cart = 0;
-  const badge = document.getElementById("cartCount");
-  document.getElementById("sections").addEventListener("click", (e) => {
-    const like = e.target.closest(".card__like");
-    if (like) {
-      e.preventDefault();
-      const liked = like.textContent.trim() === "♥";
-      like.textContent = liked ? "♡" : "♥";
-      like.style.color = liked ? "" : "#ff2d55";
-      return;
-    }
-    if (e.target.closest(".card")) {
-      cart += 1;
-      badge.hidden = false;
-      badge.textContent = cart;
-      badge.animate(
-        [{ transform: "scale(1.6)" }, { transform: "scale(1)" }],
-        { duration: 250, easing: "ease-out" }
-      );
-    }
+// chips
+document.getElementById("chips").innerHTML = chips
+  .map((c) => `<li><a href="#">${c}</a></li>`)
+  .join("");
+
+// rails — popular uses navy/blue hues, programs uses green hues
+render("railPopular", popular, 210);
+render("railProgram", programs, 150);
+
+// Simple interactions
+document.querySelectorAll(".hero__cta, .promo-card__btn").forEach((b) =>
+  b.addEventListener("click", () => alert("무료체험은 데모에서 비활성화되어 있어요 🙂"))
+);
+
+document.querySelectorAll(".rail").forEach((rail) => {
+  rail.addEventListener("click", (e) => {
+    const card = e.target.closest(".cardx");
+    if (card) card.animate(
+      [{ transform: "scale(.96)" }, { transform: "scale(1)" }],
+      { duration: 180, easing: "ease-out" }
+    );
   });
-}
+});
 
-init();
+// Tab bar active state
+document.querySelectorAll(".tab").forEach((tab) =>
+  tab.addEventListener("click", (e) => {
+    e.preventDefault();
+    document.querySelector(".tab.is-active")?.classList.remove("is-active");
+    tab.classList.add("is-active");
+  })
+);
