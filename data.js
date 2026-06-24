@@ -1,0 +1,417 @@
+window.STORE_DATA = {
+ "categories": [
+  {
+   "id": 21,
+   "name": "할인특가",
+   "icon": "assets/cat_c68a7d3ed694.png"
+  },
+  {
+   "id": 12,
+   "name": "운동건강용품",
+   "icon": "assets/cat_82ebef4d51f2.png"
+  },
+  {
+   "id": 19,
+   "name": "운동의류",
+   "icon": "assets/cat_ea1eec63377a.png"
+  },
+  {
+   "id": 16,
+   "name": "이너뷰티음료",
+   "icon": "assets/cat_43776272b73b.png"
+  },
+  {
+   "id": 17,
+   "name": "영양제",
+   "icon": "assets/cat_5058314f055f.png"
+  },
+  {
+   "id": 15,
+   "name": "식단관리",
+   "icon": "assets/cat_50771a92513d.png"
+  },
+  {
+   "id": 14,
+   "name": "입터짐방지",
+   "icon": "assets/cat_03e4d0fcb9db.png"
+  },
+  {
+   "id": 11,
+   "name": "클래스",
+   "icon": "assets/cat_715f01b9c102.png"
+  },
+  {
+   "id": 23,
+   "name": "베스트",
+   "icon": "assets/cat_f282d60a2dee.png"
+  }
+ ],
+ "banners": [
+  {
+   "title": "스피닝 바이크 53% 특가",
+   "link": "https://store.quat.life/products/605",
+   "img": "assets/banner_e12b8a3fdd01.webp"
+  },
+  {
+   "title": "에이더 손목보호대 1+1",
+   "link": "https://store.quat.life/products/145",
+   "img": "assets/banner_44fc490b1d1f.webp"
+  }
+ ],
+ "sections": [
+  {
+   "id": 379,
+   "title": "💪 콰트 전용템으로 따라하면 운동 끝!",
+   "items": [
+    {
+     "id": 26,
+     "name": "콰트 바로보드",
+     "img": "assets/p_1468bce8f88f.webp",
+     "retail": 149000,
+     "sale": 65000,
+     "rate": 56
+    },
+    {
+     "id": 10,
+     "name": "콰트 바로폼 (베이지/블랙)",
+     "img": "assets/p_f9b498dbce28.webp",
+     "retail": 68000,
+     "sale": 38900,
+     "rate": 43
+    },
+    {
+     "id": 526,
+     "name": "콰트 2단 발레바 화이트",
+     "img": "assets/p_bc83a458a5ed.webp",
+     "retail": 139000,
+     "sale": 129000,
+     "rate": 7
+    },
+    {
+     "id": 297,
+     "name": "콰트 멀티스텝박스",
+     "img": "assets/p_6cf9d60f1ad6.webp",
+     "retail": 99000,
+     "sale": 79900,
+     "rate": 19
+    },
+    {
+     "id": 6,
+     "name": "콰트 하프짐볼 베이지 2종 (58cm/46cm)",
+     "img": "assets/p_286234a1bb37.webp",
+     "retail": 69900,
+     "sale": 32000,
+     "rate": 54
+    },
+    {
+     "id": 285,
+     "name": "콰트 에센셜키트 (덤벨+웨이트 밴드+요가링+써클링+루프 밴드+양말)",
+     "img": "assets/p_e06437fe39ed.webp",
+     "retail": 143500,
+     "sale": 143500,
+     "rate": 0
+    }
+   ]
+  },
+  {
+   "id": 380,
+   "title": "🧘 운동만큼 중요한 마무리, 스트레칭템",
+   "items": [
+    {
+     "id": 472,
+     "name": "콰트 바로스틱",
+     "img": "assets/p_715d6fd6b8a6.webp",
+     "retail": 90000,
+     "sale": 55600,
+     "rate": 38
+    },
+    {
+     "id": 514,
+     "name": "콰트 미니 폼롤러",
+     "img": "assets/p_0a4fe9854e41.webp",
+     "retail": 19800,
+     "sale": 17800,
+     "rate": 10
+    },
+    {
+     "id": 374,
+     "name": "아디다스 epp 폼롤러 45cm / 90cm (필라테스 요가 스트레칭, 하드 종아리 마사지)",
+     "img": "assets/p_74a2f3658455.webp",
+     "retail": 48000,
+     "sale": 31300,
+     "rate": 35
+    },
+    {
+     "id": 38,
+     "name": "콰트 EVA 폼롤러 (60cm)",
+     "img": "assets/p_722ff9e24233.webp",
+     "retail": 18400,
+     "sale": 16900,
+     "rate": 8
+    }
+   ]
+  },
+  {
+   "id": 17,
+   "title": "NEW🎈 따끈따끈 신상 모음",
+   "items": [
+    {
+     "id": 530,
+     "name": "천호엔케어 엑스트라버진 유기농 올리브오일 1박스 (10g X 14포)",
+     "img": "assets/p_482256f3acb1.webp",
+     "retail": 11000,
+     "sale": 11000,
+     "rate": 0
+    },
+    {
+     "id": 555,
+     "name": "오빠닭 치즈품은 주먹밥 3종 5팩",
+     "img": "assets/p_a67878ccd720.webp",
+     "retail": 12500,
+     "sale": 10100,
+     "rate": 19
+    },
+    {
+     "id": 553,
+     "name": "오빠닭 오븐구이 통살닭다리 5종 5팩",
+     "img": "assets/p_a7f88104f430.webp",
+     "retail": 22500,
+     "sale": 16000,
+     "rate": 29
+    },
+    {
+     "id": 548,
+     "name": "네네치킨 부드러운 닭가슴살 소시지 4종 5팩",
+     "img": "assets/p_692f3dc4069b.webp",
+     "retail": 12500,
+     "sale": 9300,
+     "rate": 26
+    },
+    {
+     "id": 560,
+     "name": "푸라닭 통닭다리구이 3종 3팩",
+     "img": "assets/p_47330f895166.webp",
+     "retail": 21000,
+     "sale": 17100,
+     "rate": 19
+    },
+    {
+     "id": 549,
+     "name": "네네치킨 네꼬밥 2종 5팩",
+     "img": "assets/p_56988ce9ecd3.webp",
+     "retail": 12500,
+     "sale": 9300,
+     "rate": 26
+    },
+    {
+     "id": 563,
+     "name": "푸라닭 닭가슴살 함박스테이크 3종 3팩",
+     "img": "assets/p_d3ff7f9e22e0.webp",
+     "retail": 12000,
+     "sale": 9500,
+     "rate": 21
+    },
+    {
+     "id": 584,
+     "name": "천호엔케어 퓨어컬리케일 1박스 (1g X 25포)",
+     "img": "assets/p_940fc8a118d1.webp",
+     "retail": 28000,
+     "sale": 18900,
+     "rate": 32
+    },
+    {
+     "id": 583,
+     "name": "천호엔케어 바이탈업 알부민 플러스 70ml X 30포",
+     "img": "assets/p_49c0852ccef2.webp",
+     "retail": 169000,
+     "sale": 156000,
+     "rate": 8
+    },
+    {
+     "id": 582,
+     "name": "천호엔케어 퓨어 유기농 푸룬즙 1박스 (20g X 14포)",
+     "img": "assets/p_8628570d04a4.webp",
+     "retail": 30000,
+     "sale": 12500,
+     "rate": 58
+    },
+    {
+     "id": 581,
+     "name": "동원 리챔 순살 꼬꼬 200g x 9캔",
+     "img": "assets/p_9956bab1516f.webp",
+     "retail": 27500,
+     "sale": 25600,
+     "rate": 7
+    },
+    {
+     "id": 579,
+     "name": "동원 더킹 크랩스 2종 140g 8개 (오리지널, 랍스터맛)",
+     "img": "assets/p_b31d08bf01a7.webp",
+     "retail": 22400,
+     "sale": 21500,
+     "rate": 4
+    },
+    {
+     "id": 575,
+     "name": "동원 저당 롤유부초밥 254g x 4개 (고소한맛) ",
+     "img": "assets/p_66091f6081bd.webp",
+     "retail": 34000,
+     "sale": 31500,
+     "rate": 7
+    },
+    {
+     "id": 604,
+     "name": "스포틀러 쉐이크 보드 (덜덜이 진동 운동 기구, 지압 마사지, 뱃살 다이어트, 전신 운동)(튜빙밴드,전용매트증정)",
+     "img": "assets/p_ce743f554872.webp",
+     "retail": 219000,
+     "sale": 153000,
+     "rate": 30
+    },
+    {
+     "id": 603,
+     "name": "숀리 엑스바이크 E3 테이블 메타 (접이식 바이크, 실내자전거, 가정용 사이클)",
+     "img": "assets/p_c6f81a08cc97.webp",
+     "retail": 339000,
+     "sale": 214000,
+     "rate": 37
+    },
+    {
+     "id": 598,
+     "name": "숀리 AB슬라이드 플랭크 하이라이트 LED (뱃살 복근 운동 기구, 슬라이더, 롤아웃, 홈트 전신운동)",
+     "img": "assets/p_47ac83e0e3e8.webp",
+     "retail": 53800,
+     "sale": 40800,
+     "rate": 24
+    },
+    {
+     "id": 595,
+     "name": "아디다스 뉴 필라테스 요가 양말 블랙/그레이 (논슬립 발레 슈즈, 발가락 토삭스, 덧신)",
+     "img": "assets/p_25e8ce32f5ed.webp",
+     "retail": 19000,
+     "sale": 15800,
+     "rate": 17
+    },
+    {
+     "id": 591,
+     "name": "숀리 천국의 계단 프로 스텝밀 스텝퍼 (가정용 클라이머, 실내 홈트 유산소 하체 운동 기구)(베이직PVC매트증정)",
+     "img": "assets/p_9078ecbdc4e8.webp",
+     "retail": 270000,
+     "sale": 174000,
+     "rate": 36
+    },
+    {
+     "id": 589,
+     "name": "스포틀러 좌식 메타 실내자전거 (가정용 바이크, 홈트 사이클 유산소 운동기구)",
+     "img": "assets/p_95438660516f.webp",
+     "retail": 399000,
+     "sale": 273000,
+     "rate": 32
+    },
+    {
+     "id": 585,
+     "name": "스포틀러 워킹패드 애슬레틱 (접이식 런닝머신, 가정용 홈트, 운동기구)(EVA 조각매트 증정)",
+     "img": "assets/p_8cdc66d025b6.webp",
+     "retail": 409000,
+     "sale": 285000,
+     "rate": 30
+    },
+    {
+     "id": 612,
+     "name": "천호엔케어 데일리코어 초임계 알티지오메가3 1000 1박스 (850mg x 60캡슐)",
+     "img": "assets/p_173ed582566a.webp",
+     "retail": 36000,
+     "sale": 18500,
+     "rate": 49
+    },
+    {
+     "id": 527,
+     "name": "재미어트 슈레드 닭가슴살 2종",
+     "img": "assets/p_2c2bc03c19ad.webp",
+     "retail": 33600,
+     "sale": 26900,
+     "rate": 20
+    },
+    {
+     "id": 528,
+     "name": "스포틀러 원더바이크 이수지 접이식 실내자전거",
+     "img": "assets/p_093fe36bb1cd.webp",
+     "retail": 398000,
+     "sale": 339000,
+     "rate": 15
+    },
+    {
+     "id": 525,
+     "name": "재미어트 폴딩매트(그린, 베이지, 그레이)",
+     "img": "assets/p_0cd554071f5c.webp",
+     "retail": 49000,
+     "sale": 37000,
+     "rate": 24
+    },
+    {
+     "id": 472,
+     "name": "콰트 바로스틱",
+     "img": "assets/p_715d6fd6b8a6.webp",
+     "retail": 90000,
+     "sale": 55600,
+     "rate": 38
+    },
+    {
+     "id": 478,
+     "name": "칼로볼 저당밥솥, 즉석밥 제조기 (전자레인지 조리)",
+     "img": "assets/p_a321a4b38b4b.webp",
+     "retail": 48000,
+     "sale": 46000,
+     "rate": 4
+    },
+    {
+     "id": 515,
+     "name": "네추럴라이즈 라이즈 관절연골엔 MSM 2000 플러스 (60정)",
+     "img": "assets/p_dd429b42474f.webp",
+     "retail": 14900,
+     "sale": 14900,
+     "rate": 0
+    },
+    {
+     "id": 516,
+     "name": "네추럴라이즈 알티지 오메가3 1200 60캡슐",
+     "img": "assets/p_e305d51b6e43.webp",
+     "retail": 29900,
+     "sale": 29900,
+     "rate": 0
+    },
+    {
+     "id": 517,
+     "name": "네추럴라이즈 프리미엄 베르가못 오렌지 폴리페놀 60정",
+     "img": "assets/p_3e2b9c984c24.webp",
+     "retail": 14900,
+     "sale": 14900,
+     "rate": 0
+    },
+    {
+     "id": 481,
+     "name": "오아 그립인 스마트 체지방 체중계 (디지털 체성분 몸무게 측정기)",
+     "img": "assets/p_c59207064b51.webp",
+     "retail": 128500,
+     "sale": 99000,
+     "rate": 23
+    },
+    {
+     "id": 512,
+     "name": "오아 레그스파 EMS 종아리 마사지기 공기압 마사지 기계 저주파 안마기 다리 혈액 순환",
+     "img": "assets/p_6894493d4f86.webp",
+     "retail": 108000,
+     "sale": 98000,
+     "rate": 9
+    },
+    {
+     "id": 513,
+     "name": "오아 커버넥 무선 목 어깨 온열 마사지기 승모근 종아리 수험생 학생 직장인들 안마기",
+     "img": "assets/p_d284aac0c7c3.webp",
+     "retail": 87800,
+     "sale": 87800,
+     "rate": 0
+    }
+   ]
+  }
+ ]
+};
